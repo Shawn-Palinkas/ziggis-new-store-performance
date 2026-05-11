@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ziggi's Coffee — New Store Performance Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--tan:#CFA571;--tan-light:#f5ead8;--tan-dark:#a07840;--brown:#441D1F;--blue:#72B1CB;--blue-light:#e4f2f8;--blue-dark:#3d7fa0;--bg:#f7f4f0;--surface:#ffffff;--surface2:#f0ebe3;--border:#e2d9ce;--green:#2a7a4b;--green-bg:#eaf5ee;--red:#c0392b;--red-bg:#fdecea;--amber:#a05c10;--amber-bg:#fdf3e3;--purple:#6b4fa0;--purple-bg:#f0ecf8;--text:#0a0604;--text-muted:#5a4a3a;--text-dim:#7a6a5a}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-size:13px;display:flex;flex-direction:column}
+.top-bar{background:var(--tan);color:var(--brown);padding:0 24px;height:54px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;box-shadow:0 2px 8px rgba(160,120,64,0.4);z-index:200}
+.top-bar-left{display:flex;align-items:center;gap:14px}
+.top-bar h1{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;letter-spacing:-0.2px;color:var(--brown)}
+.top-bar h1 span{opacity:0.8}
+.top-bar-divider{width:1px;height:20px;background:rgba(68,29,31,0.3)}
+.top-bar-sub{font-size:12px;color:rgba(68,29,31,0.8)}
+.top-bar-right{display:flex;gap:8px;align-items:center}
+.pill{background:rgba(68,29,31,0.12);border:1px solid rgba(68,29,31,0.25);border-radius:20px;padding:3px 11px;font-size:11px;color:var(--brown)}
+.pill.tan{background:rgba(68,29,31,0.18);border-color:rgba(68,29,31,0.35)}
+.tab-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 0 0 290px;display:flex;flex-shrink:0;flex-wrap:nowrap;overflow-x:auto}
+.tab-btn{font-family:'Inter',sans-serif;font-size:12px;font-weight:500;padding:8px 16px;background:none;border:none;color:var(--text-dim);cursor:pointer;border-bottom:3px solid transparent;transition:background 0.15s,color 0.15s;margin-bottom:-1px;white-space:nowrap}
+.tab-btn:hover{color:var(--text);background:var(--surface2)}
+.tab-btn.active{color:var(--brown);background:var(--tan-light);border-bottom:3px solid var(--tan-dark);font-weight:700}
+.body-wrap{display:flex;flex:1;overflow:hidden}
+.sidebar{width:290px;flex-shrink:0;background:var(--tan);color:var(--brown);overflow-y:hidden;padding:12px 16px 14px;display:flex;flex-direction:column}
+.sb-section{margin-bottom:8px}
+.sb-section-label{font-size:11px;font-weight:700;letter-spacing:0.10em;text-transform:uppercase;color:rgba(68,29,31,0.95);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(68,29,31,0.2)}
+.sb-static-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.sb-static-label{font-size:13px;color:rgba(68,29,31,0.95)}
+.sb-static-val{font-size:13px;font-weight:600;color:var(--brown);font-family:'Inter',monospace}
+.sb-divider{height:1px;background:rgba(68,29,31,0.15);margin:2px 0 8px}
+.sb-select{width:100%;padding:5px 10px;border:1px solid rgba(68,29,31,0.3);border-radius:6px;background:rgba(255,255,255,0.35);color:var(--brown);font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;outline:none;margin-bottom:8px}
+.sb-select:focus{background:rgba(255,255,255,0.55);border-color:var(--brown)}
+.metric-block{background:rgba(68,29,31,0.08);border-radius:6px;padding:7px 10px;margin-bottom:7px}
+.metric-block .lbl{font-size:12px;color:rgba(68,29,31,0.8);margin-bottom:3px}
+.metric-block .val{font-size:17px;font-weight:700;font-family:'Syne',sans-serif;color:var(--brown)}
+.metric-block .sub{font-size:12px;color:rgba(68,29,31,0.7);margin-top:2px}
+.metric-block.red .val{color:var(--red)}
+.metric-block.green .val{color:var(--green)}
+.sb-grp-hdr{font-size:13px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:rgba(68,29,31,0.95);margin-bottom:6px}
+.sb-sep{border-top:1px solid rgba(68,29,31,0.2);margin:8px 0 6px}
+.main{flex:1;overflow-y:auto;padding:18px 22px}
+.panel{display:none}
+.panel.active{display:block}
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(68,29,31,0.06)}
+.kpi-card.accent{background:var(--tan);border-color:var(--tan-dark)}
+.kpi-card.accent .kpi-label{color:rgba(68,29,31,0.95)}
+.kpi-card.accent .kpi-val{color:var(--brown)}
+.kpi-card.accent .kpi-sub{color:rgba(68,29,31,0.85)}
+.kpi-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-dim);margin-bottom:4px}
+.kpi-val{font-size:21px;font-weight:700;font-family:'Syne',sans-serif;color:var(--text);line-height:1;margin-bottom:3px}
+.kpi-val.pos{color:var(--green)}
+.kpi-val.neg{color:var(--red)}
+.kpi-val.warn{color:var(--amber)}
+.kpi-sub{font-size:11px;color:var(--text-dim)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;box-shadow:0 1px 3px rgba(68,29,31,0.05);margin-bottom:12px}
+.card-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.card-title{font-size:13px;font-weight:600;color:var(--text)}
+.card-sub{font-size:11px;color:var(--text-dim)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.chart-wrap{position:relative;width:100%;height:280px}
+.chart-wrap-tall{position:relative;width:100%;height:420px}
+.legend-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;color:var(--text-dim)}
+.leg-dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle}
+.flag-box{font-size:11.5px;line-height:1.55;border-left:3px solid;border-radius:0 6px 6px 0;padding:8px 12px;margin-bottom:10px}
+.flag-box.warn{background:var(--amber-bg);border-color:var(--tan-dark);color:#1e0e02}
+.flag-box.ok{background:var(--green-bg);border-color:var(--green);color:#051a0c}
+.flag-box.info{background:var(--blue-light);border-color:var(--blue);color:var(--blue-dark)}
+.flag-box.bad{background:var(--red-bg);border-color:var(--red);color:#280804}
+.store-table{width:100%;border-collapse:collapse;font-size:12px}
+.store-table th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);padding:6px 8px;border-bottom:2px solid var(--border);text-align:right;white-space:nowrap}
+.store-table th:first-child{text-align:left}
+.store-table td{padding:5px 8px;border-bottom:1px solid var(--surface2);text-align:right;font-variant-numeric:tabular-nums;color:var(--text)}
+.store-table td:first-child{text-align:left;color:var(--text-muted);font-size:11.5px}
+.store-table tr.cohort-head td{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:var(--surface2);color:var(--text-dim);padding:5px 8px;border-bottom:none}
+.store-table tr.total-row td{font-weight:700;background:var(--tan-light);color:var(--brown);padding:6px 8px}
+.store-table tr.c2026-row td{background:#f0f7fc}
+.store-table tr.conyers-row td{background:var(--purple-bg)}
+.store-table tr.conyers-row td:first-child{color:var(--purple);font-weight:600}
+.store-table tr:hover td{background:var(--surface2)}
+.store-table tr.total-row:hover td{background:var(--tan-light)}
+.store-table td.pos{color:var(--green);font-weight:600}
+.store-table td.warn{color:var(--amber);font-weight:600}
+.store-table td.neg{color:var(--red);font-weight:600}
+.badge{display:inline-block;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700}
+.badge.c2024{background:#f5e8c0;color:#8B6914}
+.badge.c2025{background:var(--tan-light);color:var(--brown)}
+.badge.c2026{background:var(--blue-light);color:var(--blue-dark)}
+.badge.conyers{background:var(--purple-bg);color:var(--purple)}
+.footnote-box{font-size:11px;color:var(--text-dim);background:var(--surface2);border-radius:6px;padding:10px 14px;line-height:1.6;margin-top:4px}
+</style>
+</head>
+<body>
+<div id="gate" style="position:fixed;inset:0;z-index:9999;background:#441D1F;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Inter',sans-serif;">
+  <div style="text-align:center;margin-bottom:32px">
+    <div style="font-family:'Inter',sans-serif;font-size:34px;font-weight:800;color:#CFA571;letter-spacing:-0.5px;margin-bottom:10px;line-height:1.5;overflow:visible">Ziggi's Coffee</div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:rgba(207,165,113,0.55)">Internal Use Only</div>
+  </div>
+  <div style="background:rgba(255,255,255,0.07);border:1px solid rgba(207,165,113,0.2);border-radius:14px;padding:32px 36px;width:320px;box-shadow:0 20px 60px rgba(0,0,0,0.4)">
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:rgba(207,165,113,0.7);text-align:center;margin-bottom:18px">Enter Access Code</div>
+    <div style="position:relative;margin-bottom:14px">
+      <input id="gate-pw" type="password" placeholder="Password" autocomplete="off"
+        style="width:100%;box-sizing:border-box;padding:11px 44px 11px 14px;border-radius:8px;border:1px solid rgba(207,165,113,0.3);background:rgba(255,255,255,0.09);color:#fff;font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border 0.2s"
+        onfocus="this.style.borderColor='rgba(207,165,113,0.7)'"
+        onblur="this.style.borderColor='rgba(207,165,113,0.3)'"
+        onkeydown="if(event.key==='Enter')gateCheck()">
+      <span onclick="var i=document.getElementById('gate-pw');i.type=i.type==='password'?'text':'password'"
+        style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;color:rgba(207,165,113,0.5);font-size:16px;user-select:none">👁</span>
+    </div>
+    <div id="gate-err" style="font-size:12px;color:#e74c3c;text-align:center;margin-bottom:10px;min-height:16px"></div>
+    <button onclick="gateCheck()"
+      style="width:100%;padding:12px;border-radius:8px;border:none;background:#CFA571;color:#441D1F;font-size:14px;font-weight:700;font-family:'Syne',sans-serif;letter-spacing:0.04em;cursor:pointer;transition:background 0.2s;box-shadow:0 4px 14px rgba(207,165,113,0.3)"
+      onmouseover="this.style.background='#b8904e'"
+      onmouseout="this.style.background='#CFA571'">Access Dashboard</button>
+  </div>
+  <div style="margin-top:28px;font-size:11px;color:rgba(207,165,113,0.35);letter-spacing:0.05em">New Store Performance Dashboard &middot; Leadership Access</div>
+</div>
+<script>
+(function(){
+  var _k=btoa('#Ziggis2004!');
+  if(sessionStorage.getItem('zgauth')===_k){
+    document.getElementById('gate').style.display='none';
+  }
+  window.gateCheck=function(){
+    var v=document.getElementById('gate-pw').value;
+    if(btoa(v)===_k){
+      sessionStorage.setItem('zgauth',_k);
+      var g=document.getElementById('gate');
+      g.style.transition='opacity 0.4s';
+      g.style.opacity='0';
+      setTimeout(function(){g.style.display='none';},400);
+    } else {
+      var e=document.getElementById('gate-err');
+      e.textContent='Incorrect access code. Please try again.';
+      document.getElementById('gate-pw').value='';
+      document.getElementById('gate-pw').focus();
+      setTimeout(function(){e.textContent='';},3000);
+    }
+  };
+})();
+</script>
+
+<header class="top-bar">
+  <div class="top-bar-left">
+    <h1>Ziggi's <span>Coffee — New Store Performance</span></h1>
+    <div class="top-bar-divider"></div>
+    <span class="top-bar-sub">2024–2026 Cohort Analysis · 45 Stores</span>
+  </div>
+  <div class="top-bar-right">
+    <span class="pill" style="background:var(--blue-dark);border-color:var(--blue-dark);color:#ffffff;font-weight:700;letter-spacing:0.03em;box-shadow:0 2px 8px rgba(61,127,160,0.35)">As of May 9, 2026 · Sun–Sat work week</span>
+    <span class="pill tan">45 stores · 3 cohorts</span>
+  </div>
+</header>
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="showTab('allstores',this)">All Stores Table</button>
+  <button class="tab-btn" onclick="showTab('weekly',this)">Weekly Summary</button>
+  <button class="tab-btn" onclick="showTab('cohort',this)">Cohort Comparison</button>
+  <button class="tab-btn" onclick="showTab('individual',this)">Store Curves</button>
+  <button class="tab-btn" onclick="showTab('retention',this)">Retention Analysis</button>
+  <button class="tab-btn" onclick="showTab('marketing',this)">Marketing Assessment</button>
+  <button class="tab-btn" onclick="showTab('milestones',this)">Milestones</button>
+  <button class="tab-btn" onclick="showTab('seasonal',this)">Seasonal</button>
+</div>
+<div class="body-wrap">
+<aside class="sidebar">
+  <div class="sb-sep"></div>
+  <div class="sb-section">
+    <div class="sb-section-label">System Benchmarks</div>
+    <div class="sb-grp-hdr">2026 Cohort</div>
+    <div class="sb-static-row" style="background:var(--blue-dark);margin:0 -4px 6px;border-radius:5px;padding:5px 8px"><span class="sb-static-label" style="font-weight:700;color:#fff">Open avg</span><span class="sb-static-val" style="color:#fff">$4,422/day</span></div>
+    <div class="sb-static-row" style="background:var(--blue-dark);margin:0 -4px 6px;border-radius:5px;padding:5px 8px"><span class="sb-static-label" style="font-weight:700;color:#fff">Plateau avg (wks 8–12)</span><span class="sb-static-val" style="color:#fff">$3,050/day</span></div>
+    <div class="sb-static-row" style="background:var(--blue-dark);margin:0 -4px 6px;border-radius:5px;padding:5px 8px"><span class="sb-static-label" style="font-weight:700;color:#fff">Avg retention (4 stores)</span><span class="sb-static-val" style="color:#fff">70.3%</span></div>
+    <div class="sb-sep"></div>
+    <div class="sb-grp-hdr">2025 Cohort</div>
+    <div class="sb-static-row"><span class="sb-static-label">Open avg</span><span class="sb-static-val">$4,531/day</span></div>
+    <div class="sb-static-row"><span class="sb-static-label">Plateau avg (wks 8–12)</span><span class="sb-static-val">$2,808/day</span></div>
+    <div class="sb-static-row"><span class="sb-static-label">Avg retention</span><span class="sb-static-val">66.8%</span></div>
+    <div class="sb-sep"></div>
+    <div class="sb-grp-hdr">2024 Cohort</div>
+    <div class="sb-static-row"><span class="sb-static-label">Open avg</span><span class="sb-static-val">$3,610/day</span></div>
+    <div class="sb-static-row"><span class="sb-static-label">Plateau avg (wks 8–12)</span><span class="sb-static-val">$2,229/day</span></div>
+    <div class="sb-static-row"><span class="sb-static-label">Avg retention</span><span class="sb-static-val">67.1%</span></div>
+    <div class="sb-sep"></div>
+    <div class="sb-grp-hdr">Notable</div>
+    <div class="sb-static-row"><span class="sb-static-label">Conyers retention</span><span class="sb-static-val" style="color:var(--purple)">57.4% ⚠</span></div>
+  </div>
+</aside>
+<main class="main">
+
+<!-- ══ COHORT COMPARISON ══ -->
+<div class="panel" id="tab-cohort">
+  <div class="kpi-row">
+    <div class="kpi-card accent">
+      <div class="kpi-label">2026 — Avg Wk 1→4 Change</div>
+      <div class="kpi-val warn">-26.6%</div>
+      <div class="kpi-sub">vs -28.0% for 2025 cohort</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">2025 — Week 1 Avg</div>
+      <div class="kpi-val">$4,531</div>
+      <div class="kpi-sub">Plateau: $2,808/day · 16 stores</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">2025 — Wk 1→4 Change</div>
+      <div class="kpi-val">-28.0%</div>
+      <div class="kpi-sub">Plateau retention: 66.8%</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">2024 — Week 1 Avg</div>
+      <div class="kpi-val">$3,610</div>
+      <div class="kpi-sub">Plateau: $2,229/day · 22 stores</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">2024 — Wk 1→4 Change</div>
+      <div class="kpi-val">-28.1%</div>
+      <div class="kpi-sub">Plateau retention: 67.1%</div>
+    </div>
+  </div>
+  <div class="two-col">
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Weekly daily average — cohort trajectories</span>
+          <span class="card-sub">Weeks 1–12 post-opening</span>
+        </div>
+        <div class="legend-row">
+          <span><span class="leg-dot" style="background:#72B1CB"></span><strong>2026 cohort (7 stores) — focus</strong></span>
+          <span><span class="leg-dot" style="background:#9B7B5A"></span>2025 cohort (16 stores)</span>
+          <span><span class="leg-dot" style="background:#B8A878"></span>2024 cohort (22 stores)</span>
+          <span><span class="leg-dot" style="background:#6b4fa0"></span>Conyers — lower price tier</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-cohort-line"></canvas></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">1st Full Wk vs. plateau — by cohort</span>
+          <span class="card-sub">How far each cohort falls from its opening high</span>
+        </div>
+        <div class="legend-row">
+          <span><span class="leg-dot" style="background:#72B1CB"></span>1st Full Wk avg</span>
+          <span><span class="leg-dot" style="background:#CFA571"></span>Plateau avg (wks 8–12)</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-open-vs-plateau"></canvas></div>
+      </div>
+      <div class="flag-box warn">
+        <strong>Key finding:</strong> The 2026 cohort opened strongest at $4,422/day — +22% vs 2024 ($3,610) but below 2025 ($4,531). Plateau retention of 70.3% (4 stores) is in line with prior cohorts (2025: 66.8%, 2024: 67.1%). The Wk 1→4 change of -26.6% matches the 2025 benchmark of -28.0%, suggesting marketing strength is comparable year-over-year.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ STORE CURVES ══ -->
+<div class="panel" id="tab-individual">
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-header">
+      <span class="card-title">Store Inspector</span>
+      <span class="card-sub">Select a cohort and store to view its sales curve</span>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
+      <div style="flex:0 0 200px">
+        <label style="font-size:11px;font-weight:600;color:var(--text-dim);display:block;margin-bottom:4px">Cohort</label>
+        <select class="sb-select" id="sb-cohort-filter" onchange="filterSidebar()" style="width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--border)">
+          <option value="all">All stores</option>
+          <option value="2024">2024 cohort</option>
+          <option value="2025">2025 cohort</option>
+          <option value="2026">2026 cohort</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:240px">
+        <label style="font-size:11px;font-weight:600;color:var(--text-dim);display:block;margin-bottom:4px">Store</label>
+        <select class="sb-select" id="sb-store-select" onchange="updateSidebar()" style="width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--border)"></select>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-top:18px">
+        <div class="metric-block" id="sb-open-avg" style="margin:0;min-width:130px"><div class="lbl">1st Full Wk avg</div><div class="val">—</div></div>
+        <div class="metric-block" id="sb-last-avg" style="margin:0;min-width:130px"><div class="lbl">Last week daily avg</div><div class="val">—</div><div class="sub">—</div></div>
+        <div class="metric-block" id="sb-chg" style="margin:0;min-width:110px"><div class="lbl">Change from opening</div><div class="val">—</div></div>
+        <div class="metric-block" id="sb-plateau" style="margin:0;min-width:130px"><div class="lbl">Plateau retention</div><div class="val">—</div><div class="sub">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title" id="ind-title">Select a store to begin</span>
+      <span class="card-sub" id="ind-sub"></span>
+    </div>
+    <div class="chart-wrap-tall"><canvas id="chart-individual"></canvas></div>
+  </div>
+</div>
+
+<!-- ══ ALL STORES TABLE ══ -->
+<div class="panel active" id="tab-allstores">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">All 45 stores — opening snapshot</span>
+      <span class="card-sub">Last week: May 3–9, 2026 · Sun–Sat · daily averages</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="store-table">
+        <thead>
+          <tr>
+            <th style="text-align:left">Location</th>
+            <th>Opened</th>
+            <th>Days Open</th>
+            <th>Cohort</th>
+            <th>1st Full Wk Avg/Day</th>
+            <th>Last Wk Avg/Day</th>
+            <th>Change</th>
+            <th>Wk 1→4 Change</th>
+            <th>Plateau Ret.</th>
+          </tr>
+        </thead>
+        <tbody id="all-stores-tbody"></tbody>
+      </table>
+    </div>
+    <div class="footnote-box">1st Full Wk avg = daily average of the first complete Sun–Sat week after opening. Last week avg = daily average May 3–9, 2026. Plateau retention = wks 8–12 daily avg ÷ 1st full week daily avg. "—" means insufficient weeks of data.</div>
+  </div>
+</div>
+
+<!-- ══ RETENTION ANALYSIS ══ -->
+<div class="panel" id="tab-retention">
+  <div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi-card accent">
+      <div class="kpi-label">2026 avg retention</div>
+      <div class="kpi-val">70.3%</div>
+      <div class="kpi-sub">4 stores with data · wks 8–12</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">2025 avg retention</div>
+      <div class="kpi-val">66.8%</div>
+      <div class="kpi-sub">15 stores ex-Conyers · wks 8–12</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">2024 avg retention</div>
+      <div class="kpi-val">67.1%</div>
+      <div class="kpi-sub">22 stores · wks 8–12</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Conyers retention</div>
+      <div class="kpi-val warn">57.4%</div>
+      <div class="kpi-sub">1 store · wks 8–12</div>
+    </div>
+  </div>
+  <div class="two-col">
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Retention at plateau (wks 8–12) — 2025 cohort</span>
+          <span class="card-sub">% of 1st full wk daily avg retained · dashed line = 67.3% system avg</span>
+        </div>
+        <div class="legend-row">
+          <span><span class="leg-dot" style="background:var(--green)"></span>Above system avg (≥67.3%)</span>
+          <span><span class="leg-dot" style="background:var(--red)"></span>Below system avg</span>
+          <span><span class="leg-dot" style="background:var(--purple)"></span>Conyers — lower price tier</span>
+        </div>
+        <div class="chart-wrap-tall"><canvas id="chart-retention"></canvas></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Opening avg vs. plateau avg — scatter</span>
+          <span class="card-sub">High 1st full wk openers don't necessarily retain well</span>
+        </div>
+        <div class="chart-wrap-tall"><canvas id="chart-scatter"></canvas></div>
+      </div>
+      <div class="flag-box warn">
+        <strong>Key finding:</strong> Conyers (purple) opened with lower prices but retained only 57.4% at plateau — below the 2025 cohort average of 66.8%. Lower prices drove slightly higher opening traffic but did not improve the retention rate that determines long-term revenue.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MARKETING ASSESSMENT ══ -->
+<div class="panel" id="tab-marketing">
+  <div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi-card accent">
+      <div class="kpi-label">2026 Wk 1→4 Change (avg)</div>
+      <div class="kpi-val warn">-26.6%</div>
+      <div class="kpi-sub">vs -28.0% for 2025 · similar to prior cohort</div>
+    </div>
+    <div class="kpi-card accent">
+      <div class="kpi-label">2026 Plateau vs 2025</div>
+      <div class="kpi-val warn">+9%</div>
+      <div class="kpi-sub">$3,050 vs $2,808 — marginal gain</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">2025 Wk 1→4 Change (avg)</div>
+      <div class="kpi-val">-28.0%</div>
+      <div class="kpi-sub">Benchmark · ex-Greeley outlier</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Conyers Wk 1→12 Drop</div>
+      <div class="kpi-val neg">-44.9%</div>
+      <div class="kpi-sub">Worse than cohort avg -35.3%</div>
+    </div>
+  </div>
+  <div class="two-col">
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Wk 1→4 decline — all stores with data</span>
+          <span class="card-sub">How fast each store drops off its opening high</span>
+        </div>
+        <div class="legend-row">
+          <span><span class="leg-dot" style="background:#72B1CB"></span>2026 cohort</span>
+          <span><span class="leg-dot" style="background:#9B7B5A"></span>2025 cohort</span>
+          <span><span class="leg-dot" style="background:#B8A878"></span>2024 cohort</span>
+          <span><span class="leg-dot" style="background:#6b4fa0"></span>Conyers</span>
+        </div>
+        <div style="position:relative;width:100%;height:840px"><canvas id="chart-mkt-drop"></canvas></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Conyers deep dive — wks 1–24 vs 2025 cohort avg</span>
+          <span class="card-sub">Lower price tier test: did it improve long-term performance?</span>
+        </div>
+        <div class="legend-row">
+          <span><span class="leg-dot" style="background:var(--purple)"></span>Conyers</span>
+          <span><span class="leg-dot" style="background:var(--tan)"></span>2025 cohort avg</span>
+        </div>
+        <div class="chart-wrap-tall"><canvas id="chart-conyers"></canvas></div>
+      </div>
+      <div class="flag-box bad">
+        <strong>Conyers verdict:</strong> The lower price tier test did not improve retention. Conyers retained 57.4% of its opening pace — below the 66.8% cohort average. Lower prices pulled in slightly more opening traffic but the long-term trajectory mirrors or underperforms comparable stores. The test does not support expanding the lower price tier model.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MILESTONES ══ -->
+<div class="panel" id="tab-milestones">
+  <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:10px">
+    <div class="kpi-card accent" style="border-top:3px solid var(--blue-dark)">
+      <div class="kpi-label">2026 — 6-month milestone</div>
+      <div class="kpi-val">July 2026</div>
+      <div class="kpi-sub">First stores hit 6 months · data pending</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid var(--tan-dark)">
+      <div class="kpi-label">2025 — 6-month avg (13 stores)</div>
+      <div class="kpi-val" id="ms-kpi-2025-6m">—</div>
+      <div class="kpi-sub">Retention: <span id="ms-kpi-2025-6r">—</span> · 2026 target to beat</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid var(--tan-dark)">
+      <div class="kpi-label">2025 — 1-year avg (<span id="ms-n-2025-1">—</span> stores)</div>
+      <div class="kpi-val" id="ms-kpi-2025-1y">—</div>
+      <div class="kpi-sub">Retention: <span id="ms-kpi-2025-1r">—</span></div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid #B8A878">
+      <div class="kpi-label">2024 — 6-month avg (22 stores)</div>
+      <div class="kpi-val" id="ms-kpi-2024-6m">—</div>
+      <div class="kpi-sub">Retention: <span id="ms-kpi-2024-6r">—</span> · baseline</div>
+    </div>
+  </div>
+  <div class="flag-box info" style="margin-bottom:12px">
+    <strong>2026 stores:</strong> No milestone data yet — the earliest 2026 stores reach 6 months in <strong>July 2026</strong>. This tab will populate automatically as they mature. The 2024 and 2025 benchmarks shown here are the targets to beat.
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">6-month retention — all stores with data</span>
+        <span class="card-sub">% of 1st full wk daily avg retained at ~month 6</span>
+      </div>
+      <div class="legend-row">
+        <span><span class="leg-dot" style="background:#B8A878"></span>2024 cohort</span>
+        <span><span class="leg-dot" style="background:#CFA571"></span>2025 cohort</span>
+      </div>
+      <div style="position:relative;width:100%;height:960px"><canvas id="ms-chart-6m" style="width:100%;height:960px"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">1-year retention — 2024 cohort + early 2025</span>
+        <span class="card-sub">% of 1st full wk daily avg retained at ~1 year</span>
+      </div>
+      <div class="legend-row">
+        <span><span class="leg-dot" style="background:#B8A878"></span>2024 cohort</span>
+        <span><span class="leg-dot" style="background:#CFA571"></span>2025 cohort (early stores)</span>
+      </div>
+      <div style="position:relative;width:100%;height:840px"><canvas id="ms-chart-1y" style="width:100%;height:840px"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">All stores — milestone tracker</span>
+      <span class="card-sub">Opening avg · 6-month daily avg · 1-year daily avg · retention at each milestone · green ≥60% · amber ≥40% · red &lt;40%</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="store-table">
+        <thead>
+          <tr>
+            <th style="text-align:left">Location</th>
+            <th>Days Open</th>
+            <th style="min-width:110px">Year 1 Progress</th>
+            <th>6-Mo Daily Avg</th>
+            <th>6-Mo Retention</th>
+            <th>1-Yr Daily Avg</th>
+            <th>1-Yr Retention</th>
+          </tr>
+        </thead>
+        <tbody id="ms-table-body"></tbody>
+      </table>
+    </div>
+    <div class="footnote-box" style="margin-top:10px">
+      Milestones defined as: 6-month = 14-day average centered on day 175 (days 162–189) · 1-year = 14-day average centered on day 358 (days 344–372). Retention = milestone daily avg ÷ 1st full week daily avg. "X days away" shown for stores not yet at milestone.
+    </div>
+  </div>
+</div>
+<!-- ══ SEASONAL ══ -->
+<div class="panel" id="tab-seasonal">
+  <div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi-card accent">
+      <div class="kpi-label">Winter 2026 — Open Avg</div>
+      <div class="kpi-val">$4,313</div>
+      <div class="kpi-sub">4 stores · +17% vs Winter 2024</div>
+    </div>
+    <div class="kpi-card accent">
+      <div class="kpi-label">Winter 2026 — Plateau Avg</div>
+      <div class="kpi-val">$3,054</div>
+      <div class="kpi-sub">Retention: 70.8% · vs 69.0% in 2025</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Spring 2026 — Open Avg</div>
+      <div class="kpi-val">$4,568</div>
+      <div class="kpi-sub">3 stores · plateau data pending</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Key insight</div>
+      <div class="kpi-val warn">Winter</div>
+      <div class="kpi-sub">Slowest opens but best 2025 retention (69%)</div>
+    </div>
+  </div>
+  <div class="flag-box info" style="margin-bottom:14px">
+    Stores grouped by <strong>opening month season</strong>: Winter = Nov–Feb · Spring = Mar–May · Summer = Jun–Aug · Fall = Sep–Oct. System data confirms Jan–Feb are the lowest-volume months network-wide. Winter openings have lower trial traffic but 2025 data shows they retain customers equally well or better long-term.
+  </div>
+  <div id="seasonal-charts-container"></div>
+</div>
+
+<!-- ══ WEEKLY SUMMARY ══ -->
+<div class="panel" id="tab-weekly">
+  <!-- Top KPI row -->
+  <div class="kpi-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:12px">
+    <div class="kpi-card accent">
+      <div class="kpi-label">Week ending</div>
+      <div class="kpi-val" style="font-size:17px">May 9, 2026</div>
+      <div class="kpi-sub">7 active 2026 stores · week 6–17</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">2026 cohort avg last week</div>
+      <div class="kpi-val">$2,875</div>
+      <div class="kpi-sub">vs $3,041 prior week (-5.5%)</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Best performer</div>
+      <div class="kpi-val pos" style="font-size:16px">Wentzville</div>
+      <div class="kpi-sub">$4,362/day · -21.0% vs 1st full wk</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Needs attention</div>
+      <div class="kpi-val neg" style="font-size:16px">Beaumont</div>
+      <div class="kpi-sub">$3,094/day · -15.2% WoW</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">System avg (all 45 stores)</div>
+      <div class="kpi-val">$2,619</div>
+      <div class="kpi-sub">vs $2,679 prior week (-2.2%)</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:12px;margin-bottom:12px">
+    <!-- Main store table -->
+    <div class="wk-card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">
+        <div style="font-family:Syne,sans-serif;font-size:14px;font-weight:700;color:var(--brown)">2026 Cohort — Weekly Scorecard</div>
+        <div style="font-size:11px;color:var(--text-dim)">Week ending May 9, 2026 &nbsp;·&nbsp; 7 stores</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--surface2)">
+            <th style="text-align:left;padding:7px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:2px solid var(--border)">Store</th>
+            <th style="text-align:center;padding:7px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:2px solid var(--border)">Week #</th>
+            <th style="text-align:right;padding:7px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:2px solid var(--border)">Last Wk Daily Avg</th>
+            <th style="text-align:right;padding:7px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:2px solid var(--border)">vs Prior Week</th>
+            <th style="text-align:right;padding:7px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:2px solid var(--border)">vs 1st Full Wk</th>
+            <th style="text-align:right;padding:7px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:2px solid var(--border)">4-Wk Avg</th>
+            <th style="text-align:center;padding:7px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:2px solid var(--border)">Trend</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--surface2)">
+            <td style="padding:9px 12px;font-weight:600">Wentzville</td>
+            <td style="text-align:center;padding:9px 10px;color:var(--text-dim)">16</td>
+            <td style="text-align:right;padding:9px 12px;font-weight:600">$4,362</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--red);font-weight:600">-2.5%</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--amber)">-21.0%</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--text-muted)">$4,384</td>
+            <td style="text-align:center;padding:9px 12px;font-size:16px" title="Flat">&#8594;</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--surface2);background:#fdf7f5">
+            <td style="padding:9px 12px;font-weight:600">Beaumont <span style="font-size:10px;background:#fdecea;color:var(--red);border-radius:4px;padding:2px 5px;font-weight:600;margin-left:4px">Watch</span></td>
+            <td style="text-align:center;padding:9px 10px;color:var(--text-dim)">6</td>
+            <td style="text-align:right;padding:9px 12px;font-weight:600">$3,094</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--red);font-weight:600">-15.2%</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--red)">-48.6%</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--text-muted)">$3,723</td>
+            <td style="text-align:center;padding:9px 12px;font-size:16px;color:var(--red)" title="Declining">&#8600;</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--surface2);background:#fdf7f5">
+            <td style="padding:9px 12px;font-weight:600">Grimes <span style="font-size:10px;background:#fdecea;color:var(--red);border-radius:4px;padding:2px 5px;font-weight:600;margin-left:4px">Watch</span></td>
+            <td style="text-align:center;padding:9px 10px;color:var(--text-dim)">9</td>
+            <td style="text-align:right;padding:9px 12px;font-weight:600">$2,818</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--red);font-weight:600">-7.0%</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--red)">-33.8%</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--text-muted)">$2,974</td>
+            <td style="text-align:center;padding:9px 12px;font-size:16px;color:var(--red)" title="Declining">&#8600;</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--surface2);background:#fdf7f5">
+            <td style="padding:9px 12px;font-weight:600">Dexter <span style="font-size:10px;background:#fdecea;color:var(--red);border-radius:4px;padding:2px 5px;font-weight:600;margin-left:4px">Watch</span></td>
+            <td style="text-align:center;padding:9px 10px;color:var(--text-dim)">11</td>
+            <td style="text-align:right;padding:9px 12px;font-weight:600">$2,717</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--red);font-weight:600">-6.6%</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--red)">-37.0%</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--text-muted)">$2,858</td>
+            <td style="text-align:center;padding:9px 12px;font-size:16px;color:var(--red)" title="Declining">&#8600;</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--surface2)">
+            <td style="padding:9px 12px;font-weight:600">Meridian</td>
+            <td style="text-align:center;padding:9px 10px;color:var(--text-dim)">12</td>
+            <td style="text-align:right;padding:9px 12px;font-weight:600">$2,551</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--green);font-weight:600">+0.9%</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--amber)">-24.2%</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--text-muted)">$2,496</td>
+            <td style="text-align:center;padding:9px 12px;font-size:16px" title="Improving">&#8599;</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--surface2)">
+            <td style="padding:9px 12px;font-weight:600">Jasper</td>
+            <td style="text-align:center;padding:9px 10px;color:var(--text-dim)">16</td>
+            <td style="text-align:right;padding:9px 12px;font-weight:600">$2,540</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--red);font-weight:600">-2.3%</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--red)">-37.3%</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--text-muted)">$2,623</td>
+            <td style="text-align:center;padding:9px 12px;font-size:16px;color:var(--red)" title="Declining">&#8600;</td>
+          </tr>
+          <tr>
+            <td style="padding:9px 12px;font-weight:600">Wichita</td>
+            <td style="text-align:center;padding:9px 10px;color:var(--text-dim)">8</td>
+            <td style="text-align:right;padding:9px 12px;font-weight:600">$2,045</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--red);font-weight:600">-2.4%</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--red)">-40.3%</td>
+            <td style="text-align:right;padding:9px 12px;color:var(--text-muted)">$2,061</td>
+            <td style="text-align:center;padding:9px 12px;font-size:16px" title="Flat">&#8594;</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top:10px;font-size:11px;color:var(--text-dim);background:var(--surface2);border-radius:6px;padding:8px 12px;line-height:1.6">
+        <strong>Last Wk Daily Avg</strong> = average daily sales May 3–9 &nbsp;·&nbsp;
+        <strong>vs Prior Week</strong> = change from Apr 26–May 2 &nbsp;·&nbsp;
+        <strong>vs 1st Full Wk</strong> = change from first full week daily avg &nbsp;·&nbsp;
+        <strong>4-Wk Avg</strong> = trailing 28-day daily avg &nbsp;·&nbsp;
+        ↗ improving &nbsp; → flat &nbsp; ↘ declining (based on 4-week direction)
+      </div>
+    </div>
+
+    <!-- Highs & Lows + Narrative -->
+    <div>
+      <div class="wk-card" style="margin-bottom:10px">
+        <div style="font-family:Syne,sans-serif;font-size:13px;font-weight:700;color:var(--brown);margin-bottom:10px">Highs &amp; Lows</div>
+        <div class="hi-lo-grid">
+          <div class="hi-card good">
+            <div class="hi-label">📈 Highest Volume</div>
+            <div class="hi-store">Wentzville</div>
+            <div class="hi-val">$4,362/day</div>
+          </div>
+          <div class="hi-card bad">
+            <div class="hi-label">📉 Lowest Volume</div>
+            <div class="hi-store">Wichita</div>
+            <div class="hi-val">$2,045/day</div>
+          </div>
+          <div class="hi-card good">
+            <div class="hi-label">⬆ Best WoW</div>
+            <div class="hi-store">Meridian</div>
+            <div class="hi-val">+0.9% vs prior week</div>
+          </div>
+          <div class="hi-card bad">
+            <div class="hi-label">⬇ Worst WoW</div>
+            <div class="hi-store">Beaumont</div>
+            <div class="hi-val">-15.2% vs prior week</div>
+          </div>
+          <div class="hi-card good">
+            <div class="hi-label">💪 Best Retention</div>
+            <div class="hi-store">Wentzville</div>
+            <div class="hi-val">-21.0% vs 1st full wk</div>
+          </div>
+          <div class="hi-card bad">
+            <div class="hi-label">⚠ Steepest Drop</div>
+            <div class="hi-store">Beaumont</div>
+            <div class="hi-val">-48.6% vs 1st full wk</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="narrative-card">
+                <h4>Leadership Summary</h4>
+        <p><strong>Wentzville</strong> remains the 2026 volume leader at $4,362/day (-2.5% WoW) with the best retention in the cohort at -21.0% vs its first full week.</p>
+        <br>
+        <p><strong>Beaumont</strong> posted the steepest week-over-week decline (-15.2% WoW) — in week 6 and still settling, but the continued decline warrants close monitoring over the next 3–4 weeks.</p>
+        <br>
+        <p><strong>Meridian</strong> continues a slow recovery trend (+0.9% WoW, week 12) — one of only two stores in positive territory this week.</p>
+        <br>
+        <p><strong>Beaumont</strong> at week 6 sits at -48.6% below its first full week — the steepest retention gap in the cohort at $3,094/day.</p></div>
+    </div>
+  </div>
+
+  <!-- Trend chart -->
+  <div class="wk-card">
+    <div class="card-header">
+      <span class="card-title">2026 stores — last 8 weeks daily avg</span>
+      <span class="card-sub">How each store has tracked over the past 2 months · week ending May 9, 2026</span>
+    </div>
+    <div style="position:relative;width:100%;height:300px"><canvas id="chart-weekly-trend"></canvas></div>
+</div>
+</div>
+
+
+</main>
+</div>
+
+<script>
+// ── CONSTANTS ─────────────────────────────────────────────────────────────────
+const TAN='#CFA571',BROWN='#441D1F',BLUE='#72B1CB',BLUE_D='#3d7fa0';
+const GOLD='#B8A878',MID='#9B7B5A',PURPLE='#6b4fa0';
+const GREEN='#2a7a4b',RED='#c0392b',AMBER='#a05c10';
+const gridC='rgba(0,0,0,0.06)',textC='#5a4a3a';
+
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const STORES = [{"name":"St Peters 661 Salt Lick Rd","type":"Drive-Thru","cohort":"2024","open":"1/16/2024","days":833,"openAvg":3124,"lastAvg":2331,"chg":-25.4,"wk14":-33.3,"plateau":66.8,"weeks":[2510,3124,2467,2248,2085,1958,1889,1895,1824,1880,1616,1819],"conyers":false,"actual":1581933,"cumLost":828562,"m6Avg":1596,"m6Ret":51.1,"yr1Avg":1634,"yr1Ret":52.3},{"name":"Erie 331 Milan Pl","type":"Caf\u00e9/Drive-Thru","cohort":"2024","open":"1/30/2024","days":822,"openAvg":3594,"lastAvg":3613,"chg":0.5,"wk14":-24.3,"plateau":73.6,"weeks":[3046,3594,2920,2893,2722,2701,2099,2193,2378,2712,2743,2410],"conyers":false,"actual":2397250,"cumLost":266302,"m6Avg":2436,"m6Ret":67.8,"yr1Avg":2482,"yr1Ret":69.1},{"name":"Aberdeen 2401 3rd Ave SE","type":"Drive-Thru","cohort":"2024","open":"1/31/2024","days":821,"openAvg":4669,"lastAvg":3668,"chg":-21.4,"wk14":-22.9,"plateau":59.9,"weeks":[4736,4669,4048,3495,3599,3273,3008,2353,2867,2621,2724,2665],"conyers":false,"actual":2283034,"cumLost":1820118,"m6Avg":2438,"m6Ret":52.2,"yr1Avg":2242,"yr1Ret":48.0},{"name":"Sioux Falls 4410 E 57th St","type":"Drive-Thru","cohort":"2024","open":"2/20/2024","days":801,"openAvg":5145,"lastAvg":3770,"chg":-26.7,"wk14":-34.2,"plateau":66.5,"weeks":[5395,5145,4308,3814,3386,3575,3236,3451,3243,3214,3221,3448],"conyers":false,"actual":2696606,"cumLost":1759767,"m6Avg":3321,"m6Ret":64.5,"yr1Avg":2990,"yr1Ret":58.1},{"name":"Cheyenne 1000 E. Pershing Blvd","type":"Drive-Thru","cohort":"2024","open":"3/8/2024","days":784,"openAvg":2757,"lastAvg":2254,"chg":-18.2,"wk14":-25.6,"plateau":82.4,"weeks":[1851,2757,1903,1985,2051,2135,2098,2212,1998,1948,2055,2011],"conyers":false,"actual":1769240,"cumLost":-159549,"m6Avg":2091,"m6Ret":75.8,"yr1Avg":2232,"yr1Ret":81.0},{"name":"Fairbury 1409 K St.","type":"Drive-Thru","cohort":"2024","open":"4/9/2024","days":748,"openAvg":5087,"lastAvg":2421,"chg":-52.4,"wk14":-31.8,"plateau":59.8,"weeks":[6110,5087,3851,3773,3469,3225,3234,2674,2759,2866,2834,2907],"conyers":false,"actual":1817336,"cumLost":3121961,"m6Avg":2193,"m6Ret":43.1,"yr1Avg":2374,"yr1Ret":46.7},{"name":"Burlington 310 S Lincoln St","type":"Caf\u00e9/Drive-Thru","cohort":"2024","open":"4/16/2024","days":745,"openAvg":4798,"lastAvg":3100,"chg":-35.4,"wk14":-22.0,"plateau":73.5,"weeks":[5916,4798,3800,3703,3743,3561,3211,3115,3183,3150,3475,3157],"conyers":false,"actual":2133893,"cumLost":2689022,"m6Avg":2493,"m6Ret":52.0,"yr1Avg":2902,"yr1Ret":60.5},{"name":"Windsor 2145 7th St","type":"Caf\u00e9/Drive-Thru","cohort":"2024","open":"5/14/2024","days":717,"openAvg":2866,"lastAvg":3221,"chg":12.4,"wk14":-17.0,"plateau":88.1,"weeks":[3401,2866,2364,2473,2380,2329,2627,2418,2250,2281,2422,2394],"conyers":false,"actual":1931122,"cumLost":682766,"m6Avg":2440,"m6Ret":85.1,"yr1Avg":2807,"yr1Ret":97.9},{"name":"Carthage 209 W Fir Rd","type":"Drive-Thru","cohort":"2024","open":"6/11/2024","days":689,"openAvg":3710,"lastAvg":1506,"chg":-59.4,"wk14":-36.1,"plateau":55.2,"weeks":[3943,3710,3063,2633,2370,2265,2094,1971,1925,1885,1912,1837],"conyers":false,"actual":1083721,"cumLost":1833518,"m6Avg":1652,"m6Ret":44.5,"yr1Avg":1435,"yr1Ret":38.7},{"name":"Hawthorne 4744 El Segundo Blvd","type":"Drive-Thru","cohort":"2024","open":"6/18/2024","days":682,"openAvg":6885,"lastAvg":4177,"chg":-39.3,"wk14":-18.6,"plateau":74.7,"weeks":[7897,6885,6291,5843,5607,5124,5206,5020,4912,5063,4794,5080],"conyers":false,"actual":2853429,"cumLost":2712550,"m6Avg":3687,"m6Ret":53.6,"yr1Avg":4232,"yr1Ret":61.5},{"name":"Valley Center 31269 Valley","type":"Drive-Thru","cohort":"2024","open":"6/26/2024","days":674,"openAvg":4410,"lastAvg":2623,"chg":-40.5,"wk14":-33.5,"plateau":65.4,"weeks":[4583,4410,3600,3343,2933,3067,2864,2738,2728,2806,2882,2649],"conyers":false,"actual":1733740,"cumLost":1495939,"m6Avg":2281,"m6Ret":51.7,"yr1Avg":2424,"yr1Ret":55.0},{"name":"Augusta 252 Furys Ferry Rd","type":"Drive-Thru","cohort":"2024","open":"7/23/2024","days":638,"openAvg":3408,"lastAvg":1800,"chg":-47.2,"wk14":-40.5,"plateau":53.0,"weeks":[3307,3408,2322,2250,2027,1990,2031,1908,1817,1515,1120,1711],"conyers":false,"actual":1121759,"cumLost":1114309,"m6Avg":1363,"m6Ret":40.0,"yr1Avg":1798,"yr1Ret":52.8},{"name":"Richmond 11434 FM 1464","type":"Caf\u00e9/Drive-Thru","cohort":"2024","open":"7/30/2024","days":638,"openAvg":1698,"lastAvg":808,"chg":-52.4,"wk14":-39.3,"plateau":52.3,"weeks":[1008,1698,1036,1033,1031,1018,1012,882,979,810,680,931],"conyers":false,"actual":482692,"cumLost":183125,"m6Avg":597,"m6Ret":35.2,"yr1Avg":716,"yr1Ret":42.2},{"name":"Commerce City 15196 E 120th Av","type":"Drive-Thru","cohort":"2024","open":"8/20/2024","days":619,"openAvg":2659,"lastAvg":1752,"chg":-34.1,"wk14":-24.7,"plateau":74.9,"weeks":[2631,2659,2189,2091,2001,1960,1970,1816,1955,2079,1871,1893],"conyers":false,"actual":1112186,"cumLost":574540,"m6Avg":1706,"m6Ret":64.2,"yr1Avg":1943,"yr1Ret":73.1},{"name":"Commerce City 15259 E 103rd Pl","type":"Drive-Thru","cohort":"2024","open":"8/20/2024","days":619,"openAvg":2627,"lastAvg":1913,"chg":-27.2,"wk14":-29.3,"plateau":67.8,"weeks":[2406,2627,2060,1882,1858,1875,1803,1597,1750,1687,1772,1761],"conyers":false,"actual":1093153,"cumLost":454299,"m6Avg":1753,"m6Ret":66.7,"yr1Avg":1857,"yr1Ret":70.7},{"name":"Denver 6409 N Biscay St","type":"Drive-Thru","cohort":"2024","open":"8/27/2024","days":612,"openAvg":2475,"lastAvg":2068,"chg":-16.4,"wk14":-2.8,"plateau":83.2,"weeks":[2527,2475,1890,2054,2405,2523,2487,2134,2195,2175,2025,2044],"conyers":false,"actual":1196885,"cumLost":309105,"m6Avg":1813,"m6Ret":73.3,"yr1Avg":2081,"yr1Ret":84.1},{"name":"Bentonville 1622 SE J St","type":"Drive-Thru","cohort":"2024","open":"10/15/2024","days":562,"openAvg":2539,"lastAvg":1748,"chg":-31.2,"wk14":-30.8,"plateau":66.9,"weeks":[1991,2539,1905,1939,1756,1639,1326,1636,1831,1767,1129,1178],"conyers":false,"actual":878075,"cumLost":371846,"m6Avg":1520,"m6Ret":59.9,"yr1Avg":1714,"yr1Ret":67.5},{"name":"Brighton 51 N 42nd Ave","type":"Drive-Thru","cohort":"2024","open":"10/29/2024","days":549,"openAvg":4091,"lastAvg":3478,"chg":-15.0,"wk14":-25.7,"plateau":65.0,"weeks":[4307,4091,3365,3198,3040,2773,2790,2950,2684,2508,2393,2334],"conyers":false,"actual":1642738,"cumLost":800396,"m6Avg":2908,"m6Ret":71.1,"yr1Avg":2976,"yr1Ret":72.7},{"name":"Omaha 5102 S 201st St","type":"Drive-Thru","cohort":"2024","open":"11/22/2024","days":524,"openAvg":3802,"lastAvg":1807,"chg":-52.5,"wk14":-14.8,"plateau":75.0,"weeks":[4868,3802,2802,2626,3241,2629,2196,2281,2259,2151,2184,1963],"conyers":false,"actual":1014828,"cumLost":2334253,"m6Avg":1731,"m6Ret":45.5,"yr1Avg":1652,"yr1Ret":43.5},{"name":"Abbeville 102 W Greenwood St","type":"Caf\u00e9/Drive-Thru","cohort":"2024","open":"12/10/2024","days":505,"openAvg":2957,"lastAvg":1559,"chg":-47.3,"wk14":-32.5,"plateau":64.4,"weeks":[3005,2957,2728,2347,1996,2078,1914,1829,1906,1905,1824,1834],"conyers":false,"actual":853111,"cumLost":700270,"m6Avg":1673,"m6Ret":56.6,"yr1Avg":1584,"yr1Ret":53.6},{"name":"Sulphur Springs 1659 Arbala Rd","type":"Drive-Thru","cohort":"2024","open":"12/10/2024","days":501,"openAvg":3125,"lastAvg":1439,"chg":-54.0,"wk14":-47.7,"plateau":52.6,"weeks":[3226,3125,1896,1880,1633,1690,1500,1392,1542,1541,1435,1624],"conyers":false,"actual":713590,"cumLost":1049356,"m6Avg":1173,"m6Ret":37.5,"yr1Avg":1377,"yr1Ret":44.1},{"name":"Rose Hill 906 N Rose Hill Rd","type":"Drive-Thru","cohort":"2024","open":"12/31/2024","days":485,"openAvg":3015,"lastAvg":1204,"chg":-60.1,"wk14":-31.9,"plateau":54.4,"weeks":[3866,3015,2539,2051,2053,2043,1779,1284,1595,1498,1471,1397],"conyers":false,"actual":673896,"cumLost":1445403,"m6Avg":1250,"m6Ret":41.5,"yr1Avg":1211,"yr1Ret":40.2},{"name":"Savannah 102 Jim Benton Court","type":"Drive-Thru","cohort":"2025","open":"1/1/2025","days":486,"openAvg":3721,"lastAvg":2909,"chg":-21.8,"wk14":-22.3,"plateau":74.1,"weeks":[3463,3721,3325,2796,2890,2807,2788,3038,2742,2595,2558,2473],"conyers":false,"actual":1254306,"cumLost":477092,"m6Avg":2617,"m6Ret":70.3,"yr1Avg":2334,"yr1Ret":62.7},{"name":"Sherwood 21003 SW Pacific Hwy","type":"Drive-Thru","cohort":"2025","open":"1/21/2025","days":466,"openAvg":3451,"lastAvg":1928,"chg":-44.1,"wk14":-37.4,"plateau":52.9,"weeks":[3600,3451,2474,2047,2162,2043,1703,1797,1870,1646,1751,1813],"conyers":false,"actual":861078,"cumLost":862422,"m6Avg":1963,"m6Ret":56.9,"yr1Avg":1593,"yr1Ret":46.2},{"name":"Parker 19745 E Parker Square","type":"Drive-Thru","cohort":"2025","open":"2/11/2025","days":445,"openAvg":3372,"lastAvg":2845,"chg":-15.6,"wk14":-30.5,"plateau":77.3,"weeks":[2828,3372,3012,2654,2345,2407,2447,2429,2494,2512,2593,2700],"conyers":false,"actual":1181227,"cumLost":107014,"m6Avg":2867,"m6Ret":85.0,"yr1Avg":2571,"yr1Ret":76.2},{"name":"Lakewood 5721 Bellflower Blvd","type":"Drive-Thru","cohort":"2025","open":"3/11/2025","days":418,"openAvg":5956,"lastAvg":3937,"chg":-33.9,"wk14":-36.8,"plateau":61.7,"weeks":[5597,5956,4256,4016,3764,3429,3277,3281,3493,3810,3910,3887],"conyers":false,"actual":1485703,"cumLost":853430,"m6Avg":3319,"m6Ret":55.7,"yr1Avg":3574,"yr1Ret":60.0},{"name":"Granite Falls 1270 Hwy 212","type":"Drive-Thru","cohort":"2025","open":"4/1/2025","days":396,"openAvg":6315,"lastAvg":2682,"chg":-57.5,"wk14":-29.8,"plateau":58.8,"weeks":[6531,6315,4621,4133,4430,3885,3583,3761,3819,3226,3146,3371],"conyers":false,"actual":1113142,"cumLost":1650908,"m6Avg":2674,"m6Ret":42.3,"yr1Avg":2259,"yr1Ret":35.8},{"name":"Greeley 2530 11th Ave","type":"Drive-Thru","cohort":"2025","open":"4/1/2025","days":396,"openAvg":2324,"lastAvg":2194,"chg":-5.6,"wk14":-11.5,"plateau":71.8,"weeks":[1905,2324,1954,2012,2056,1952,1732,1804,1609,1653,1515,1600],"conyers":false,"actual":681789,"cumLost":86982,"m6Avg":1601,"m6Ret":68.9,"yr1Avg":1949,"yr1Ret":83.9},{"name":"Poplar Bluff 2903 Oak Grove Rd","type":"Drive-Thru","cohort":"2025","open":"5/20/2025","days":346,"openAvg":5691,"lastAvg":3262,"chg":-42.7,"wk14":-34.5,"plateau":51.1,"weeks":[6611,5691,4422,3875,3727,3572,3186,2858,2927,3122,3055,2848],"conyers":false,"actual":1077342,"cumLost":1168030,"m6Avg":2794,"m6Ret":49.1,"yr1Avg":null,"yr1Ret":null},{"name":"Brookings 1130 Main Ave South","type":"Drive-Thru","cohort":"2025","open":"6/3/2025","days":333,"openAvg":6672,"lastAvg":3867,"chg":-42.0,"wk14":-43.9,"plateau":46.7,"weeks":[6732,6672,4974,4425,3741,3694,3519,3532,2985,3185,2816,3432],"conyers":false,"actual":1114888,"cumLost":1076988,"m6Avg":2727,"m6Ret":40.9,"yr1Avg":null,"yr1Ret":null},{"name":"Longmont 3730 Bramante Dr","type":"Drive-Thru","cohort":"2025","open":"6/27/2025","days":309,"openAvg":4018,"lastAvg":3882,"chg":-3.4,"wk14":-11.8,"plateau":110.0,"weeks":[4487,4018,4309,3790,3543,3445,3719,3508,3352,3260,3381,3291],"conyers":false,"actual":1051710,"cumLost":764516,"m6Avg":3221,"m6Ret":80.2,"yr1Avg":null,"yr1Ret":null},{"name":"Monument 16529 Cinematic View","type":"Drive-Thru","cohort":"2025","open":"7/22/2025","days":284,"openAvg":5532,"lastAvg":3393,"chg":-38.7,"wk14":-24.1,"plateau":59.1,"weeks":[5225,5532,4739,4938,4198,3951,3611,3318,3322,3355,3314,3115],"conyers":false,"actual":920276,"cumLost":555593,"m6Avg":2605,"m6Ret":47.1,"yr1Avg":null,"yr1Ret":null},{"name":"Medford 1260 N 8th St","type":"Drive-Thru","cohort":"2025","open":"8/26/2025","days":247,"openAvg":6463,"lastAvg":2951,"chg":-54.3,"wk14":-28.3,"plateau":55.1,"weeks":[8342,6463,4935,4701,4634,4222,3898,3714,3417,3457,3494,3447],"conyers":false,"actual":868443,"cumLost":1223234,"m6Avg":2981,"m6Ret":46.1,"yr1Avg":null,"yr1Ret":null},{"name":"Conyers 1730 GA-138","type":"Drive-Thru","cohort":"2025","open":"10/21/2025","days":192,"openAvg":3649,"lastAvg":2612,"chg":-28.4,"wk14":-23.2,"plateau":57.4,"weeks":[3539,3649,3032,2808,2801,2484,2342,2191,2396,2309,2112,1901],"conyers":true,"actual":462262,"cumLost":192253,"m6Avg":2396,"m6Ret":65.7,"yr1Avg":null,"yr1Ret":null},{"name":"Montevideo 1406 MN-7","type":"Drive-Thru","cohort":"2025","open":"11/4/2025","days":179,"openAvg":4110,"lastAvg":2638,"chg":-35.8,"wk14":-44.6,"plateau":62.2,"weeks":[4223,4110,3394,2571,2277,2198,2541,2547,2436,2544,2538,2306],"conyers":false,"actual":479959,"cumLost":301417,"m6Avg":2612,"m6Ret":63.6,"yr1Avg":null,"yr1Ret":null},{"name":"Fargo 4541 52nd Ave","type":"Drive-Thru","cohort":"2025","open":"11/18/2025","days":165,"openAvg":3649,"lastAvg":3836,"chg":5.1,"wk14":-6.5,"plateau":87.0,"weeks":[6559,3649,3459,3227,3413,3290,3393,2966,3132,2877,3104,3449],"conyers":false,"actual":577452,"cumLost":528797,"m6Avg":null,"m6Ret":null,"yr1Avg":null,"yr1Ret":null},{"name":"Derby 1728 N Nelson Dr","type":"Drive-Thru","cohort":"2025","open":"12/30/2025","days":124,"openAvg":2799,"lastAvg":1892,"chg":-32.4,"wk14":-21.9,"plateau":65.0,"weeks":[2401,2799,2338,1614,2185,2082,2045,1983,2102,1918,1854,2018],"conyers":false,"actual":253613,"cumLost":21644,"m6Avg":null,"m6Ret":null,"yr1Avg":null,"yr1Ret":null},{"name":"Hudsonville 3830 32nd St","type":"Drive-Thru","cohort":"2025","open":"12/30/2025","days":124,"openAvg":4784,"lastAvg":3448,"chg":-27.9,"wk14":-36.4,"plateau":69.2,"weeks":[3616,4784,3378,2932,3043,3252,3476,3454,3522,3163,3149,3289],"conyers":false,"actual":420654,"cumLost":27028,"m6Avg":null,"m6Ret":null,"yr1Avg":null,"yr1Ret":null},{"name":"Jasper 1311 3rd Ave","type":"Drive-Thru","cohort":"2026","open":"1/13/2026","days":117,"openAvg":4049,"lastAvg":2540,"chg":-37.3,"wk14":-25.8,"plateau":63.6,"weeks":[4049,2919,3089,3005,2911,2969,2614,2553,2614,2437,2649,2632,2635,2715,2601,2540],"conyers":false,"actual":336833,"cumLost":136900,"m6Avg":null,"m6Ret":null,"yr1Avg":null,"yr1Ret":null},{"name":"Wentzville 100 Wilmer Meadow","type":"Caf\u00e9/Drive-Thru","cohort":"2026","open":"1/13/2026","days":117,"openAvg":5521,"lastAvg":4362,"chg":-21.0,"wk14":-17.4,"plateau":78.2,"weeks":[5521,4798,4547,4559,4777,4576,4264,4267,4412,4354,4228,4330,4249,4452,4475,4362],"conyers":false,"actual":528528,"cumLost":117429,"m6Avg":null,"m6Ret":null,"yr1Avg":null,"yr1Ret":null},{"name":"Meridian 4801 S Tavistock Ave","type":"Drive-Thru","cohort":"2026","open":"2/10/2026","days":89,"openAvg":3367,"lastAvg":2551,"chg":-24.2,"wk14":-26.4,"plateau":73.2,"weeks":[3367,2958,2510,2479,2402,2407,2429,2330,2417,2488,2529,2551],"conyers":false,"actual":235104,"cumLost":64559,"m6Avg":null,"m6Ret":null,"yr1Avg":null,"yr1Ret":null},{"name":"Dexter 7097 Dexter-Ann Arbor","type":"Drive-Thru","cohort":"2026","open":"2/17/2026","days":82,"openAvg":4315,"lastAvg":2717,"chg":-37.0,"wk14":-28.8,"plateau":66.2,"weeks":[4315,3612,3168,3073,3006,2546,2672,2921,2884,2908,2717],"conyers":false,"actual":264104,"cumLost":89726,"m6Avg":null,"m6Ret":null,"yr1Avg":null,"yr1Ret":null},{"name":"Grimes 1201 NE Gateway Dr","type":"Drive-Thru","cohort":"2026","open":"3/3/2026","days":68,"openAvg":4255,"lastAvg":2818,"chg":-33.8,"wk14":-17.4,"plateau":null,"weeks":[4255,3453,3444,3515,2981,3057,2992,3031,2818],"conyers":false,"actual":232471,"cumLost":56869,"m6Avg":null,"m6Ret":null,"yr1Avg":null,"yr1Ret":null},{"name":"Wichita 8669 W 29th St N","type":"Drive-Thru","cohort":"2026","open":"3/10/2026","days":61,"openAvg":3425,"lastAvg":2045,"chg":-40.3,"wk14":-36.1,"plateau":null,"weeks":[3425,2676,2440,2188,2031,2074,2095,2045],"conyers":false,"actual":151319,"cumLost":57606,"m6Avg":null,"m6Ret":null,"yr1Avg":null,"yr1Ret":null},{"name":"Beaumont 311 E 1st St.","type":"Drive-Thru","cohort":"2026","open":"3/24/2026","days":47,"openAvg":6023,"lastAvg":3094,"chg":-48.6,"wk14":-34.6,"plateau":null,"weeks":[6023,4526,4209,3941,3647,3094],"conyers":false,"actual":220072,"cumLost":63009,"m6Avg":null,"m6Ret":null,"yr1Avg":null,"yr1Ret":null}];
+
+const WK_AVG_2024=[3610,2879,2707,2608,2519,2380,2261,2299,2275,2208,2229];
+const WK_AVG_2025=[4531,3663,3283,3200,3044,2953,2886,2851,2789,2768,2808];
+const WK_AVG_2026=[4422, 3563, 3344, 3251, 3108, 2960, 2844, 2858, 3029, 3047, 3031, 3171, 3442, 3584, 3538, 3451];
+const CONYERS_WKS=[3649,3032,2808,2801,2484,2342,2191,2396,2309,2112,1901,2012,1989,1934,1956,1978,2012,1978,1956,2034,2056,2034,2012];
+const CONYERS_EXT=[4532,3664,3284,3201,3045,2954,2887,2851,2790,2768,2809,2780,2760,2745,2730,2718,2705,2695,2688,2678,2670,2663,2658];
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+const fmt=n=>'$'+Math.round(n).toLocaleString();
+const pct=n=>(n>=0?'+':'')+n.toFixed(1)+'%';
+const baseOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:gridC},ticks:{color:textC,font:{size:11}}},y:{grid:{color:gridC},ticks:{color:textC,font:{size:11},callback:v=>'$'+Math.round(v/1000)+'k'}}}};
+
+// ── TAB NAVIGATION ────────────────────────────────────────────────────────────
+function showTab(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  var panel=$('tab-'+id);
+  if(panel){panel.classList.add('active');}
+  if(btn){btn.classList.add('active');}
+  if(id==='allstores'&&!window._allBuilt){buildAllStores();window._allBuilt=true;}
+  if(id==='retention'&&!window._retBuilt){buildRetention();window._retBuilt=true;}
+  if(id==='marketing'&&!window._mktBuilt){buildMarketing();window._mktBuilt=true;}
+  if(id==='milestones'&&!window._msBuilt){buildMilestones();window._msBuilt=true;}
+  if(id==='seasonal'&&!window._seasBuilt){buildSeasonal();window._seasBuilt=true;}
+  if(id==='weekly'&&!window._wkBuilt){buildWeekly();window._wkBuilt=true;}
+  else if(id==='milestones'){
+    setTimeout(function(){
+      Chart.instances && Object.values(Chart.instances).forEach(function(c){
+        if(c&&c.canvas&&(c.canvas.id==='ms-chart-6m'||c.canvas.id==='ms-chart-1y')){c.resize();}
+      });
+    },50);
+  }
+}
+
+// ── SIDEBAR ───────────────────────────────────────────────────────────────────
+function filterSidebar(){
+  var cohort=$('sb-cohort-filter').value;
+  var sel=$('sb-store-select');
+  sel.innerHTML='';
+  var filtered=cohort==='all'?STORES:STORES.filter(s=>s.cohort===cohort);
+  filtered.forEach(function(s){
+    var opt=document.createElement('option');
+    opt.value=s.name;
+    opt.textContent=s.name+' ('+s.cohort+')';
+    sel.appendChild(opt);
+  });
+  updateSidebar();
+}
+function updateSidebar(){
+  var name=$('sb-store-select').value;
+  var s=STORES.find(function(x){return x.name===name;});
+  if(!s)return;
+  $('sb-open-avg').querySelector('.val').textContent=fmt(s.openAvg);
+  var lwEl=$('sb-last-avg');
+  lwEl.querySelector('.val').textContent=s.lastAvg>0?fmt(s.lastAvg):'No data';
+  lwEl.querySelector('.sub').textContent='Last week (4/26–5/2)';
+  $('sb-chg').querySelector('.val').textContent=pct(s.chg);
+  $('sb-chg').className='metric-block'+(s.chg>0?' green':s.chg<-30?' red':' ');
+  var platEl=$('sb-plateau');
+  if(s.plateau){
+    platEl.querySelector('.val').textContent=s.plateau+'%';
+    platEl.querySelector('.sub').textContent='Wks 8–12 vs 1st full wk';
+    platEl.className='metric-block'+(s.plateau>=65?' green':s.plateau<45?' red':'');
+  } else {
+    platEl.querySelector('.val').textContent='—';
+    platEl.querySelector('.sub').textContent='Not enough weeks yet';
+    platEl.className='metric-block';
+  }
+  // Update individual curve
+  if(window._indChart){
+    var cohortAvg=s.cohort==='2024'?WK_AVG_2024:s.cohort==='2025'?WK_AVG_2025:WK_AVG_2026;
+    var color=s.conyers?PURPLE:s.cohort==='2024'?GOLD:s.cohort==='2025'?MID:BLUE_D;
+    var labels=s.weeks.map(function(_,i){return 'Wk '+(i+1);});
+    window._indChart.data.labels=labels;
+    window._indChart.data.datasets[0].data=s.weeks;
+    window._indChart.data.datasets[0].borderColor=color;
+    window._indChart.data.datasets[0].pointBackgroundColor=color;
+    window._indChart.data.datasets[0].label=s.name;
+    window._indChart.data.datasets[1].data=cohortAvg.slice(0,s.weeks.length);
+    window._indChart.update();
+    $('ind-title').textContent=s.name;
+    $('ind-sub').textContent=s.cohort+' cohort · '+s.days+' days open · opened '+s.open;
+  }
+}
+
+// ── COHORT CHART ──────────────────────────────────────────────────────────────
+try {
+  new Chart($('chart-cohort-line'),{
+    type:'line',
+    data:{
+      labels:WK_AVG_2025.map(function(_,i){return 'Wk '+(i+1);}),
+      datasets:[
+        {data:WK_AVG_2026,borderColor:BLUE,borderWidth:3,pointRadius:4,pointBackgroundColor:BLUE,backgroundColor:'rgba(114,177,203,0.06)',fill:true,tension:0.3,label:'2026'},
+        {data:WK_AVG_2025,borderColor:MID,borderWidth:1.5,pointRadius:2,pointBackgroundColor:MID,backgroundColor:'transparent',tension:0.3,borderDash:[5,3],label:'2025'},
+        {data:WK_AVG_2024,borderColor:GOLD,borderWidth:1.5,pointRadius:2,pointBackgroundColor:GOLD,backgroundColor:'transparent',tension:0.3,borderDash:[8,4],label:'2024'},
+        {data:CONYERS_WKS.slice(0,12),borderColor:PURPLE,borderWidth:1.5,pointRadius:2,pointBackgroundColor:PURPLE,backgroundColor:'transparent',tension:0.3,borderDash:[3,3],label:'Conyers'}
+      ]
+    },
+    options:Object.assign({},baseOpts,{plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ' '+ctx.dataset.label+': '+fmt(ctx.parsed.y)+'/day';}}}}})
+  });
+} catch(e){console.error('cohort line chart error:',e);}
+
+// ── OPEN VS PLATEAU CHART ─────────────────────────────────────────────────────
+try {
+  var cohortLabels=['2024 (22 stores)','2025 (16 stores)','2026 (7 stores)'];
+  var openAvgs=[3610,4531,4422];
+  var platAvgs=[2229,2808,3050];
+  var gaps=openAvgs.map(function(o,i){return Math.round((o-platAvgs[i])/o*100);});
+  new Chart($('chart-open-vs-plateau'),{
+    type:'bar',
+    data:{
+      labels:cohortLabels,
+      datasets:[
+        {label:'1st Full Wk avg',data:openAvgs,backgroundColor:[BLUE,BLUE,BLUE],borderRadius:4},
+        {label:'Plateau avg (wks 8–12)',data:platAvgs,backgroundColor:[TAN,TAN,TAN],borderRadius:4}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{afterBody:function(items){return['Gap: -'+gaps[items[0].dataIndex]+'% from opening to plateau'];},label:function(ctx){return ' '+ctx.dataset.label+': '+fmt(ctx.parsed.y)+'/day';}}}},
+      scales:{x:{grid:{display:false},ticks:{color:textC,font:{size:13},maxRotation:0}},y:{grid:{color:gridC},ticks:{color:textC,font:{size:11},callback:function(v){return '$'+Math.round(v/1000)+'k';}},min:0,suggestedMax:6000}}
+    }
+  });
+} catch(e){console.error('open vs plateau chart error:',e);}
+
+// ── INDIVIDUAL STORE CHART ────────────────────────────────────────────────────
+var firstStore=STORES[0];
+window._indChart=new Chart($('chart-individual'),{
+  type:'line',
+  data:{
+    labels:firstStore.weeks.map(function(_,i){return 'Wk '+(i+1);}),
+    datasets:[
+      {data:firstStore.weeks,borderColor:GOLD,borderWidth:2.5,pointRadius:3,pointBackgroundColor:GOLD,backgroundColor:'rgba(207,165,113,0.08)',fill:true,tension:0.3,label:firstStore.name},
+      {data:WK_AVG_2024.slice(0,firstStore.weeks.length),borderColor:'rgba(0,0,0,0.2)',borderWidth:1.5,borderDash:[4,3],pointRadius:0,backgroundColor:'transparent',tension:0.3,label:'Cohort avg'}
+    ]
+  },
+  options:Object.assign({},baseOpts,{plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ' '+ctx.dataset.label+': '+fmt(ctx.parsed.y)+'/day';}}}}}),
+});
+
+// ── ALL STORES TABLE ──────────────────────────────────────────────────────────
+function buildAllStores(){
+  var html='';
+  ['2026','2025','2024'].forEach(function(cohort){
+    var group=STORES.filter(function(s){return s.cohort===cohort;});
+    html+='<tr class="cohort-head"><td colspan="9">'+cohort+' cohort — '+group.length+' stores</td></tr>';
+    group.forEach(function(s){
+      var chgCls=s.chg>0?'pos':s.chg<-30?'neg':'warn';
+      var platCls=s.plateau?(s.plateau>=65?'pos':s.plateau<45?'neg':'warn'):'';
+      var rowCls=s.conyers?'conyers-row':cohort==='2026'?'c2026-row':'';
+      var badge='<span class="badge '+(s.conyers?'conyers':'c'+cohort)+'">'+( s.conyers?'Price test':cohort)+'</span>';
+      html+='<tr class="'+rowCls+'"><td>'+s.name+' '+badge+'</td><td>'+s.open+'</td><td>'+s.days+'</td><td>'+cohort+'</td><td>'+fmt(s.openAvg)+'</td><td>'+(s.lastAvg>0?fmt(s.lastAvg):'<em>No data</em>')+'</td><td class="'+chgCls+'">'+pct(s.chg)+'</td><td>'+(s.wk14!==null?pct(s.wk14):'—')+'</td><td class="'+platCls+'">'+(s.plateau?s.plateau+'%':'—')+'</td></tr>';
+    });
+  });
+  $('all-stores-tbody').innerHTML=html;
+}
+
+// ── RETENTION ANALYSIS ────────────────────────────────────────────────────────
+function buildRetention(){
+    var ret=[
+    {name:'Longmont 3730',ret:110.0,open:4018,cohort:'2025'},
+    {name:'Windsor 2145',ret:88.1,open:2866,cohort:'2024'},
+    {name:'Fargo 4541',ret:87.0,open:3649,cohort:'2025'},
+    {name:'Denver 6409',ret:83.2,open:2475,cohort:'2024'},
+    {name:'Cheyenne 1000',ret:82.4,open:2757,cohort:'2024'},
+    {name:'Parker 19745',ret:77.3,open:3372,cohort:'2025'},
+    {name:'Omaha 5102',ret:75.0,open:3802,cohort:'2024'},
+    {name:'Commerce City',ret:74.9,open:2659,cohort:'2024'},
+    {name:'Hawthorne 4744',ret:74.7,open:6885,cohort:'2024'},
+    {name:'Savannah 102',ret:74.1,open:3721,cohort:'2025'},
+    {name:'Erie 331',ret:73.6,open:3594,cohort:'2024'},
+    {name:'Burlington 310',ret:73.5,open:4798,cohort:'2024'},
+    {name:'Greeley 2530',ret:71.8,open:2324,cohort:'2025'},
+    {name:'Hudsonville 3830',ret:69.2,open:4784,cohort:'2025'},
+    {name:'Commerce City',ret:67.8,open:2627,cohort:'2024'},
+    {name:'Bentonville 1622',ret:66.9,open:2539,cohort:'2024'},
+    {name:'St Peters',ret:66.8,open:3124,cohort:'2024'},
+    {name:'Sioux Falls',ret:66.5,open:5145,cohort:'2024'},
+    {name:'Valley Center',ret:65.4,open:4410,cohort:'2024'},
+    {name:'Brighton 51',ret:65.0,open:4091,cohort:'2024'},
+    {name:'Derby 1728',ret:65.0,open:2799,cohort:'2025'},
+    {name:'Abbeville 102',ret:64.4,open:2957,cohort:'2024'},
+    {name:'Montevideo 1406',ret:62.2,open:4110,cohort:'2025'},
+    {name:'Lakewood 5721',ret:61.7,open:5956,cohort:'2025'},
+    {name:'Aberdeen 2401',ret:59.9,open:4669,cohort:'2024'},
+    {name:'Fairbury 1409',ret:59.8,open:5087,cohort:'2024'},
+    {name:'Monument 16529',ret:59.1,open:5532,cohort:'2025'},
+    {name:'Granite Falls',ret:58.8,open:6315,cohort:'2025'},
+    {name:'Conyers 1730',ret:57.4,open:3649,cohort:'conyers'},
+    {name:'Carthage 209',ret:55.2,open:3710,cohort:'2024'},
+    {name:'Medford 1260',ret:55.1,open:6463,cohort:'2025'},
+    {name:'Rose Hill',ret:54.4,open:3015,cohort:'2024'},
+    {name:'Augusta 252',ret:53.0,open:3408,cohort:'2024'},
+    {name:'Sherwood 21003',ret:52.9,open:3451,cohort:'2025'},
+    {name:'Sulphur Springs',ret:52.6,open:3125,cohort:'2024'},
+    {name:'Richmond 11434',ret:52.3,open:1698,cohort:'2024'},
+    {name:'Poplar Bluff',ret:51.1,open:5691,cohort:'2025'},
+    {name:'Brookings 1130',ret:46.7,open:6672,cohort:'2025'},
+    {name:'Wentzville 100',ret:78.2,open:5521,cohort:'2026'},
+    {name:'Meridian 4801',ret:73.2,open:3367,cohort:'2026'},
+    {name:'Dexter 7097',ret:66.2,open:4315,cohort:'2026'},
+    {name:'Jasper 1311',ret:63.6,open:4049,cohort:'2026'},
+  ].sort(function(a,b){return b.ret-a.ret;});
+  var sysAvg=67.3;
+  var colors=ret.map(function(s){return s.cohort==='conyers'?PURPLE:s.ret>=sysAvg?GREEN:RED;});
+  new Chart($('chart-retention'),{
+    type:'bar',indexAxis:'y',
+    data:{
+      labels:ret.map(function(s){return s.name+(s.cohort==='conyers'?' (Conyers)':'');}),
+      datasets:[{data:ret.map(function(s){return s.ret;}),backgroundColor:colors,borderRadius:2}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},annotation:{annotations:{line1:{type:'line',xMin:sysAvg,xMax:sysAvg,borderColor:'rgba(0,0,0,0.4)',borderWidth:1.5,borderDash:[4,3]}}},
+        tooltip:{callbacks:{title:function(items){return ret[items[0].dataIndex].name;},label:function(item){var s=ret[item.dataIndex];return ' '+s.ret.toFixed(1)+'% retained at plateau (opened '+fmt(s.open)+'/day)';}}}},
+      scales:{x:{min:0,max:120,grid:{color:gridC},ticks:{color:textC,font:{size:11},callback:function(v){return v+'%';}}},y:{grid:{display:false},ticks:{color:textC,font:{size:11},autoSkip:false}}}
+    }
+  });
+  var scatterData=ret.map(function(d){return {x:d.open,y:d.ret,label:d.name,conyers:d.cohort==='conyers'};});
+  new Chart($('chart-scatter'),{
+    type:'scatter',
+    data:{datasets:[{data:scatterData,backgroundColor:function(ctx){var d=scatterData[ctx.dataIndex];return d?d.conyers?PURPLE:TAN:'transparent';},pointRadius:6,pointHoverRadius:8}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){var d=scatterData[ctx.dataIndex];return d?' '+d.label+': opened '+fmt(d.x)+'/day · '+d.y+'% retained':'';},title:function(){return '';},}}},
+      scales:{x:{grid:{color:gridC},ticks:{color:textC,font:{size:11},callback:function(v){return '$'+Math.round(v/1000)+'k';}},title:{display:true,text:'1st Full Wk daily avg',color:textC,font:{size:11}}},y:{grid:{color:gridC},ticks:{color:textC,font:{size:11},callback:function(v){return v+'%';}},title:{display:true,text:'Plateau retention %',color:textC,font:{size:11}}}}
+    }
+  });
+}
+
+// ── MARKETING ASSESSMENT ──────────────────────────────────────────────────────
+function buildMarketing(){
+  var hasWk14=STORES.filter(function(s){return s.wk14!==null;}).sort(function(a,b){return b.wk14-a.wk14;});
+  var colors=hasWk14.map(function(s){return s.conyers?PURPLE:s.cohort==='2024'?GOLD:s.cohort==='2025'?MID:BLUE;});
+  new Chart($('chart-mkt-drop'),{
+    type:'bar',indexAxis:'y',
+    data:{
+      labels:hasWk14.map(function(s){return s.name.split(' ').slice(0,2).join(' ')+'  ('+s.cohort+')';}),
+      datasets:[{data:hasWk14.map(function(s){return s.wk14;}),backgroundColor:colors,borderRadius:2}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{title:function(items){return hasWk14[items[0].dataIndex].name;},label:function(item){var s=hasWk14[item.dataIndex];return ' '+s.wk14.toFixed(1)+'% change wk1 to wk4';}}}},
+      scales:{x:{min:-60,max:15,grid:{color:gridC},ticks:{color:textC,font:{size:11},callback:function(v){return v+'%';}}},y:{grid:{display:false},ticks:{color:textC,font:{size:10},autoSkip:false}}}
+    }
+  });
+  var wks=CONYERS_WKS.map(function(_,i){return 'Wk '+(i+1);});
+  new Chart($('chart-conyers'),{
+    type:'line',
+    data:{
+      labels:wks,
+      datasets:[
+        {data:CONYERS_WKS,borderColor:PURPLE,borderWidth:2.5,pointRadius:3,pointBackgroundColor:PURPLE,backgroundColor:'rgba(107,79,160,0.06)',fill:true,tension:0.3,label:'Conyers'},
+        {data:CONYERS_EXT,borderColor:TAN,borderWidth:1.5,borderDash:[5,3],pointRadius:0,backgroundColor:'transparent',tension:0.3,label:'2025 cohort avg'}
+      ]
+    },
+    options:Object.assign({},baseOpts,{plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ' '+ctx.dataset.label+': '+fmt(ctx.parsed.y)+'/day';}}}}})
+  });
+}
+
+// ── MILESTONES ────────────────────────────────────────────────────────────────
+function buildMilestones(){
+  var m24_6=STORES.filter(function(s){return s.cohort==='2024'&&s.m6Avg;});
+  var m24_1=STORES.filter(function(s){return s.cohort==='2024'&&s.yr1Avg;});
+  var m25_6=STORES.filter(function(s){return s.cohort==='2025'&&s.m6Avg;});
+  var m25_1=STORES.filter(function(s){return s.cohort==='2025'&&s.yr1Avg;});
+  var avg=function(arr){return Math.round(arr.reduce(function(a,b){return a+b;},0)/arr.length);};
+  var avgR=function(arr){return (arr.reduce(function(a,b){return a+b;},0)/arr.length).toFixed(1);};
+  function safe(id,val){var el=$(id);if(el)el.textContent=val;}
+  safe('ms-kpi-2024-6m','$'+avg(m24_6.map(function(s){return s.m6Avg;})).toLocaleString());
+  safe('ms-kpi-2024-6r',avgR(m24_6.map(function(s){return s.m6Ret;}))+'%');
+  safe('ms-kpi-2025-6m','$'+avg(m25_6.map(function(s){return s.m6Avg;})).toLocaleString());
+  safe('ms-kpi-2025-6r',avgR(m25_6.map(function(s){return s.m6Ret;})));
+  safe('ms-n-2025-1',m25_1.length);
+  if(m25_1.length){
+    safe('ms-kpi-2025-1y','$'+avg(m25_1.map(function(s){return s.yr1Avg;})).toLocaleString());
+    safe('ms-kpi-2025-1r',avgR(m25_1.map(function(s){return s.yr1Ret;})));
+  }
+  // Table
+  var html='';
+  ['2026','2025','2024'].forEach(function(cohort){
+    var group=STORES.filter(function(s){return s.cohort===cohort;});
+    html+='<tr class="cohort-head"><td colspan="7">'+cohort+' cohort — '+group.length+' stores</td></tr>';
+    group.forEach(function(s){
+      var m6Cls=s.m6Ret?(s.m6Ret>=60?'pos':s.m6Ret>=40?'warn':'neg'):'';
+      var y1Cls=s.yr1Ret?(s.yr1Ret>=60?'pos':s.yr1Ret>=40?'warn':'neg'):'';
+      var dTo6=Math.max(0,182-s.days);
+      var dTo1=Math.max(0,365-s.days);
+      var prog=Math.min(100,Math.round(s.days/365*100));
+      var rowCls=cohort==='2026'?'c2026-row':'';
+      var barC=cohort==='2026'?BLUE_D:cohort==='2025'?MID:GOLD;
+      html+='<tr class="'+rowCls+'"><td>'+s.name+'</td><td>'+s.days+'</td>';
+      html+='<td style="min-width:100px"><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:5px;background:#e0d5c8;border-radius:3px;overflow:hidden"><div style="width:'+prog+'%;height:100%;background:'+barC+';border-radius:3px"></div></div><span style="font-size:10px;color:var(--text-dim)">'+prog+'%</span></div></td>';
+      html+='<td>'+(s.m6Avg?fmt(s.m6Avg):dTo6>0?'<span style="font-size:10px;color:var(--text-dim)">'+dTo6+'d away</span>':'—')+'</td>';
+      html+='<td class="'+m6Cls+'">'+(s.m6Ret?s.m6Ret.toFixed(1)+'%':'—')+'</td>';
+      html+='<td>'+(s.yr1Avg?fmt(s.yr1Avg):dTo1>0?'<span style="font-size:10px;color:var(--text-dim)">'+dTo1+'d away</span>':'—')+'</td>';
+      html+='<td class="'+y1Cls+'">'+(s.yr1Ret?s.yr1Ret.toFixed(1)+'%':'—')+'</td></tr>';
+    });
+    var g6=group.filter(function(s){return s.m6Avg;});
+    var g1=group.filter(function(s){return s.yr1Avg;});
+    html+='<tr class="total-row"><td>Cohort '+cohort+' avg</td><td></td><td></td>';
+    html+='<td>'+(g6.length?'$'+avg(g6.map(function(s){return s.m6Avg;})).toLocaleString():'—')+'</td>';
+    html+='<td>'+(g6.length?avgR(g6.map(function(s){return s.m6Ret;}))+'%':'—')+'</td>';
+    html+='<td>'+(g1.length?'$'+avg(g1.map(function(s){return s.yr1Avg;})).toLocaleString():'—')+'</td>';
+    html+='<td>'+(g1.length?avgR(g1.map(function(s){return s.yr1Ret;}))+'%':'—')+'</td></tr>';
+  });
+  $('ms-table-body').innerHTML=html;
+  // 6-month chart
+  var m6All=STORES.filter(function(s){return s.m6Ret!==null;}).sort(function(a,b){return b.m6Ret-a.m6Ret;});
+  var barColors6=m6All.map(function(s){return s.cohort==='2024'?GOLD:TAN;});
+  (function(){
+    var el=$('ms-chart-6m');
+    if(!el)return;
+    var ROW=26,LPAD=160,RPAD=60,BAR_MAX=300,XMAX=120;
+    var h=m6All.length*ROW+50;
+    el.parentElement.style.height=h+'px';
+    var svg='<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="'+h+'" style="font-family:Inter,sans-serif">';
+    // x-axis gridlines and labels
+    [0,20,40,60,80,100,120].forEach(function(v){
+      var x=LPAD+v/XMAX*BAR_MAX;
+      svg+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+(h-20)+'" stroke="'+gridC+'" stroke-width="1"/>';
+      svg+='<text x="'+x+'" y="'+(h-6)+'" text-anchor="middle" font-size="10" fill="'+textC+'">'+v+'%</text>';
+    });
+    // system avg line at 57%
+    var avgX=LPAD+57/XMAX*BAR_MAX;
+    svg+='<line x1="'+avgX+'" y1="0" x2="'+avgX+'" y2="'+(h-20)+'" stroke="rgba(0,0,0,0.3)" stroke-width="1.5" stroke-dasharray="4,3"/>';
+    svg+='<text x="'+(avgX+3)+'" y="12" font-size="9" fill="rgba(0,0,0,0.5)">57% avg</text>';
+    m6All.forEach(function(s,i){
+      var y=i*ROW+ROW*0.1;
+      var barW=Math.max(2,s.m6Ret/XMAX*BAR_MAX);
+      var color=barColors6[i];
+      var label=s.name.split(' ').slice(0,2).join(' ');
+      svg+='<text x="'+(LPAD-6)+'" y="'+(y+ROW*0.65)+'" text-anchor="end" font-size="10" fill="'+textC+'" dominant-baseline="middle">'+label+'</text>';
+      svg+='<rect x="'+LPAD+'" y="'+(y+ROW*0.1)+'" width="'+barW+'" height="'+(ROW*0.7)+'" fill="'+color+'" rx="2"/>';
+      svg+='<text x="'+(LPAD+barW+4)+'" y="'+(y+ROW*0.65)+'" font-size="10" fill="'+textC+'" dominant-baseline="middle">'+s.m6Ret.toFixed(1)+'%</text>';
+    });
+    svg+='</svg>';
+    el.outerHTML=svg;
+  })();
+  // 1-year chart
+  var yr1All=STORES.filter(function(s){return s.yr1Ret!==null;}).sort(function(a,b){return b.yr1Ret-a.yr1Ret;});
+  var barColors1=yr1All.map(function(s){return s.cohort==='2024'?GOLD:TAN;});
+  (function(){
+    var el=$('ms-chart-1y');
+    if(!el)return;
+    var ROW=28,LPAD=160,BAR_MAX=300,XMAX=120;
+    var h=yr1All.length*ROW+50;
+    el.parentElement.style.height=h+'px';
+    var svg='<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="'+h+'" style="font-family:Inter,sans-serif">';
+    [0,20,40,60,80,100,120].forEach(function(v){
+      var x=LPAD+v/XMAX*BAR_MAX;
+      svg+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+(h-20)+'" stroke="'+gridC+'" stroke-width="1"/>';
+      svg+='<text x="'+x+'" y="'+(h-6)+'" text-anchor="middle" font-size="10" fill="'+textC+'">'+v+'%</text>';
+    });
+    var avgX=LPAD+65/XMAX*BAR_MAX;
+    svg+='<line x1="'+avgX+'" y1="0" x2="'+avgX+'" y2="'+(h-20)+'" stroke="rgba(0,0,0,0.3)" stroke-width="1.5" stroke-dasharray="4,3"/>';
+    svg+='<text x="'+(avgX+3)+'" y="12" font-size="9" fill="rgba(0,0,0,0.5)">60% avg</text>';
+    yr1All.forEach(function(s,i){
+      var y=i*ROW+ROW*0.1;
+      var barW=Math.max(2,s.yr1Ret/XMAX*BAR_MAX);
+      var color=barColors1[i];
+      var label=s.name.split(' ').slice(0,2).join(' ');
+      svg+='<text x="'+(LPAD-6)+'" y="'+(y+ROW*0.65)+'" text-anchor="end" font-size="10" fill="'+textC+'" dominant-baseline="middle">'+label+'</text>';
+      svg+='<rect x="'+LPAD+'" y="'+(y+ROW*0.1)+'" width="'+barW+'" height="'+(ROW*0.7)+'" fill="'+color+'" rx="2"/>';
+      svg+='<text x="'+(LPAD+barW+4)+'" y="'+(y+ROW*0.65)+'" font-size="10" fill="'+textC+'" dominant-baseline="middle">'+s.yr1Ret.toFixed(1)+'%</text>';
+    });
+    svg+='</svg>';
+    el.outerHTML=svg;
+  })();
+}
+
+
+// ── SEASONAL DATA ─────────────────────────────────────────────────────────────
+const SEASONAL = {
+  winter:{
+    label:'Winter (Nov–Feb)',color24:'#B8A878',color25:'#9B7B5A',color26:BLUE,
+    '2024':{n:8,stores:['St Peters','Erie','Aberdeen','Sioux Falls','Omaha','Abbeville','Sulphur Springs','Rose Hill'],openAvg:3679,platAvg:2155,platRet:58.6,wkAvgs:[3679,2963,2669,2589,2493,2203,2085,2202,2190,2152,2145]},
+    '2025':{n:7,stores:['Savannah','Sherwood','Parker','Montevideo','Fargo','Derby','Hudsonville'],openAvg:3698,platAvg:2553,platRet:69.0,wkAvgs:[3698,3054,2549,2617,2583,2627,2602,2614,2465,2507,2578]},
+    '2026':{n:4,stores:['Jasper','Wentzville','Meridian','Dexter'],openAvg:4313,platAvg:3054,platRet:70.8,wkAvgs:[4313, 3572, 3328, 3279, 3274, 3124, 2995, 3018, 3082, 3047, 3031]}
+  },
+  spring:{
+    label:'Spring (Mar–May)',color24:'#B8A878',color25:'#9B7B5A',color26:BLUE,
+    '2024':{n:4,stores:['Cheyenne','Fairbury','Burlington','Windsor'],openAvg:3877,platAvg:2606,platRet:67.2,wkAvgs:[3877,2979,2983,2911,2812,2793,2605,2548,2561,2697,2617]},
+    '2025':{n:4,stores:['Lakewood','Granite Falls','Greeley','Poplar Bluff'],openAvg:5071,platAvg:2935,platRet:57.9,wkAvgs:[5071,3813,3509,3494,3210,2944,2926,2962,2953,2907,2927]},
+    '2026':{n:3,stores:['Grimes','Wichita','Beaumont'],openAvg:4568,platAvg:null,platRet:null,wkAvgs:[4568, 3552, 3364, 3215, 2886, 2742]}
+  },
+  summer:{
+    label:'Summer (Jun–Aug)',color24:'#B8A878',color25:'#9B7B5A',color26:BLUE,
+    '2024':{n:8,stores:['Carthage','Hawthorne','Valley Center','Augusta','Richmond','Commerce City (1)','Commerce City (2)','Denver'],openAvg:3484,platAvg:2244,platRet:64.4,wkAvgs:[3484,2806,2641,2529,2478,2433,2258,2283,2252,2132,2238]},
+    '2025':{n:4,stores:['Brookings','Longmont','Monument','Medford'],openAvg:5671,platAvg:3335,platRet:58.8,wkAvgs:[5671,4739,4464,4029,3828,3687,3518,3269,3314,3251,3321]},
+    '2026':null
+  },
+  fall:{
+    label:'Fall (Sep–Oct)',color24:'#B8A878',color25:'#9B7B5A',color26:BLUE,
+    '2024':{n:2,stores:['Bentonville','Brighton'],openAvg:3315,platAvg:2045,platRet:61.7,wkAvgs:[3315,2635,2569,2398,2206,2058,2293,2257,2137,1761,1756]},
+    '2025':{n:1,stores:['Conyers'],openAvg:3649,platAvg:2178,platRet:59.7,wkAvgs:[3649,3032,2808,2801,2484,2342,2191,2396,2309,2112,1901]},
+    '2026':null
+  }
+};
+
+function buildSeasonal(){
+  var container=$('seasonal-charts-container');
+  if(!container)return;
+  var seasons=['winter','spring','summer','fall'];
+  var html='';
+  seasons.forEach(function(sk){
+    var s=SEASONAL[sk];
+    var years=['2024','2025','2026'].filter(function(y){return s[y];});
+    // KPI mini-row
+    html+='<div style="margin-bottom:16px">';
+    html+='<div style="font-family:Syne,sans-serif;font-size:15px;font-weight:700;color:var(--brown);margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--tan)">'+s.label+'</div>';
+    // summary cards
+    html+='<div style="display:grid;grid-template-columns:repeat('+years.length+',1fr);gap:8px;margin-bottom:10px">';
+    years.forEach(function(yr){
+      var d=s[yr];
+      var accent=yr==='2026'?'background:var(--blue-light);border:1px solid var(--blue)':'background:var(--surface);border:1px solid var(--border)';
+      html+='<div style="border-radius:8px;padding:10px 12px;'+accent+'">';
+      html+='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);margin-bottom:4px">'+yr+' · '+d.n+' store'+(d.n>1?'s':'')+'</div>';
+      html+='<div style="font-size:18px;font-weight:700;font-family:Syne,sans-serif;color:var(--text)">$'+d.openAvg.toLocaleString()+'<span style="font-size:11px;color:var(--text-dim);font-weight:400">/day open</span></div>';
+      if(d.platAvg){
+        html+='<div style="font-size:12px;color:var(--text-muted);margin-top:2px">Plateau: $'+d.platAvg.toLocaleString()+'/day &nbsp;·&nbsp; '+d.platRet+'% retained</div>';
+      } else {
+        html+='<div style="font-size:12px;color:var(--text-dim);margin-top:2px">Plateau pending</div>';
+      }
+      html+='<div style="font-size:11px;color:var(--text-dim);margin-top:4px">'+d.stores.slice(0,4).join(', ')+(d.stores.length>4?' +'+( d.stores.length-4)+' more':'')+'</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+    // Chart
+    html+='<div class="card"><div class="card-header"><span class="card-title">'+s.label+' — weekly trajectory by cohort year</span><span class="card-sub">Daily avg sales · starting from 1st full week</span></div>';
+    html+='<div class="legend-row">';
+    years.forEach(function(yr){
+      var c=yr==='2024'?'#B8A878':yr==='2025'?'#9B7B5A':BLUE;
+      var bold=yr==='2026'?'font-weight:700':'';
+      html+='<span><span class="leg-dot" style="background:'+c+'"></span><span style="'+bold+'">'+yr+' ('+s[yr].n+' stores)</span></span>';
+    });
+    html+='</div>';
+    html+='<div style="position:relative;width:100%;height:240px"><canvas id="chart-seasonal-'+sk+'"></canvas></div></div>';
+    html+='</div>';
+  });
+  container.innerHTML=html;
+
+  // Draw charts
+  seasons.forEach(function(sk){
+    var s=SEASONAL[sk];
+    var years=['2024','2025','2026'].filter(function(y){return s[y];});
+    var maxWks=0;
+    years.forEach(function(yr){var w=s[yr].wkAvgs.filter(function(x){return x!==null;}).length;if(w>maxWks)maxWks=w;});
+    var labels=Array.from({length:maxWks},function(_,i){return 'Wk '+(i+1);});
+    var datasets=years.map(function(yr){
+      var d=s[yr];
+      var c=yr==='2024'?'#B8A878':yr==='2025'?'#9B7B5A':BLUE;
+      var bw=yr==='2026'?3:1.5;
+      var pr=yr==='2026'?4:2;
+      var bd=yr==='2024'?[8,4]:yr==='2025'?[5,3]:undefined;
+      var ds={data:d.wkAvgs.slice(0,maxWks).map(function(v){return v;}),borderColor:c,borderWidth:bw,pointRadius:pr,pointBackgroundColor:c,backgroundColor:yr==='2026'?'rgba(114,177,203,0.06)':'transparent',fill:yr==='2026',tension:0.3,label:yr+' (n='+d.n+')'};
+      if(bd)ds.borderDash=bd;
+      return ds;
+    });
+    var ctx=$('chart-seasonal-'+sk);
+    if(!ctx)return;
+    new Chart(ctx,{
+      type:'line',
+      data:{labels:labels,datasets:datasets},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ' '+ctx.dataset.label+': $'+Math.round(ctx.parsed.y).toLocaleString()+'/day';}}}},
+        scales:{x:{grid:{color:gridC},ticks:{color:textC,font:{size:11}}},y:{grid:{color:gridC},ticks:{color:textC,font:{size:11},callback:function(v){return '$'+Math.round(v/1000)+'k';}}}}
+      }
+    });
+  });
+}
+
+
+// ── WEEKLY SUMMARY ────────────────────────────────────────────────────────────
+function buildWeekly(){
+  // Sparkline data: last 4 weeks for each 2026 store (oldest to newest)
+  var sparks = {
+    'wentzville': [4249, 4452, 4475, 4362],
+    'grimes':     [3057, 2992, 3031, 2818],
+    'beaumont':   [4209, 3941, 3647, 3094],
+    'dexter':     [2921, 2884, 2908, 2717],
+    'jasper':     [2635, 2715, 2601, 2540],
+    'meridian':   [2417, 2488, 2529, 2551],
+    'wichita':    [2031, 2074, 2095, 2045]
+  };
+  Object.keys(sparks).forEach(function(key){
+    var el=document.getElementById('sp-'+key);
+    if(!el) return;
+    var vals=sparks[key];
+    var mx=Math.max.apply(null,vals);
+    var avg=vals.reduce(function(a,b){return a+b;},0)/vals.length;
+    vals.forEach(function(v){
+      var bar=document.createElement('div');
+      bar.className='spark-bar';
+      bar.style.height=Math.round(v/mx*28)+'px';
+      bar.style.background=v>=avg?'var(--green)':'var(--red)';
+      bar.style.flex='1';
+      bar.title='$'+v.toLocaleString()+'/day';
+      el.appendChild(bar);
+    });
+  });
+
+  // 8-week trend line chart
+  var stores2026=[
+    {name:'Wentzville', color:'#72B1CB', data:[5630,5521,4798,4547,4559,4777,4576,4264,4267,4412,4354,4228,4330,4249,4452,4475,4362]},
+    {name:'Jasper',     color:'#9B7B5A', data:[5044,4049,2919,3089,3005,2911,2969,2614,2553,2614,2437,2649,2632,2635,2715,2601,2540]},
+    {name:'Beaumont',   color:'#c0392b', data:[null,null,null,null,null,null,null,null,null,null,8397,6023,4526,4209,3941,3647,3094]},
+    {name:'Grimes',     color:'#6b4fa0', data:[null,null,null,null,null,null,null,5129,4255,3453,3444,3515,2981,3057,2992,3031,2818]},
+    {name:'Dexter',     color:'#2a7a4b', data:[null,null,null,null,null,5469,4315,3612,3168,3073,3006,2546,2672,2921,2884,2908,2717]},
+    {name:'Meridian',   color:'#a05c10', data:[null,null,null,null,3807,3367,2958,2510,2479,2402,2407,2429,2330,2417,2488,2529,2551]},
+    {name:'Wichita',    color:'#441D1F', data:[null,null,null,null,null,null,null,null,3702,3425,2676,2440,2188,2031,2074,2095,2045]},
+  ];
+  // Show only last 10 weeks of system time (wks ending Apr 6 through May 9)
+  var labels=["Mar 9", "Mar 16", "Mar 23", "Mar 30", "Apr 6", "Apr 13", "Apr 20", "Apr 27", "May 4", "May 9"];
+  var startIdx=7; // align to last 10 weeks of data
+  var datasets=stores2026.map(function(s){
+    return {
+      label:s.name,
+      data:s.data.slice(startIdx),
+      borderColor:s.color,
+      backgroundColor:'transparent',
+      borderWidth:s.name==='Wentzville'?2.5:1.5,
+      pointRadius:s.name==='Wentzville'?4:3,
+      pointBackgroundColor:s.color,
+      tension:0.3,
+      spanGaps:false
+    };
+  });
+  new Chart($('chart-weekly-trend'),{
+    type:'line',
+    data:{labels:['Wk-9','Wk-8','Wk-7','Wk-6','Wk-5','Wk-4','Wk-3','Wk-2','Wk-1','This Wk'],datasets:datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true,position:'bottom',labels:{color:textC,font:{size:11},boxWidth:10,padding:12}},
+        tooltip:{callbacks:{label:function(ctx){return ' '+ctx.dataset.label+': $'+Math.round(ctx.parsed.y).toLocaleString()+'/day';}}}
+      },
+      scales:{
+        x:{grid:{color:gridC},ticks:{color:textC,font:{size:11}}},
+        y:{grid:{color:gridC},ticks:{color:textC,font:{size:11},callback:function(v){return '$'+Math.round(v/1000)+'k';}}}
+      }
+    }
+  });
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+// build default tab immediately
+buildAllStores(); window._allBuilt=true;
+filterSidebar();
+updateSidebar();
+</script>
+</body>
+</html>
